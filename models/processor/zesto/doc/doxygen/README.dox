@@ -1,0 +1,254 @@
+/** @mainpage Zesto 0.0
+
+@section sec_intro Introduction
+Zesto is a cycle-level x86 processor simulator built on top of SimpleScalar. Its strength is in low-level cylce-by-cycle modeling of a modern, Intel-styled processor pipeline. Zesto was originally developed by Dr. Gabriel Loh and his students. It is then modified and integrated as part of the Manifold simulator framework. This document provides descriptions for the simulator architecture and details of the front end/Zesto as well as Zesto/cache interfaces.
+
+
+
+\n
+@section sec_directory Directory Structure
+The Zesto directory structure:
+\n
+\n
+\code
+Zesto
+|... trace-core.h / trace-core.cc
+|... qsimlib-core.h / qsimlib-core.cc
+|... qsimclient-core.h / qsimclient-core.cc
+|... qsim files (.h / .cc)
+|... pin
+|... test
+|... original zesto files / sub-directories
+\endcode
+  \n
+- trace-core.h / trace-core.cc: Implementation of trace core using PIN traces as front end.
+
+- qsimlib-core.h / qsimlib-core.cc: Implementation of qsimlib core using Qsim library as front end.
+
+- qsimclient-core.h / qsimclient-core.cc: Implementation of qsimclient core using Qsim server as front end.
+
+- qsim files: qsim.h, qsim-client.h, qsim-client.cc, qsim-net.h
+
+- pin: This directory contains the PIN utility needed to generate PIN traces
+
+- Test: This directory contains test cases for diffrent Zesto cores. 
+
+
+
+\n
+@section sec_overview Overview
+
+Zesto is a processor timing model developed as part of the Manifold framework for simulation of multicore systems.
+Figure 1 below shows the overall Zesto simulator organization. Figure 2 shows the overview of the Zesto detailed pipeline model.
+  \n
+  \image html sim_org.png "Figure 1 - Overall Zesto simulator organization"
+  \n
+  \n
+  \image html pipeline.png "Figure 2 - Overview of the Zesto Detailed Pipeline Model (DPM)"
+  \n
+
+For more in-depth information about Zesto internal, please visit the original Zesto support site:
+<ul><li> http://zesto.cc.gatech.edu</ul> 
+  \n
+  
+@subsection zesto_cache Zesto/Cache Interface 
+Zesto communicates with cache by sending and receiving messages of the type \e cache_req, which is defined in /simple-cache/cache_messages.h. For more information on cache_req, please refer to the simple-cache spec.
+
+The Zesto/cache interface is implemented in ZPIPE-exec/exec-DPM.cpp with all the data structures needed to support the zesto-cache communication defined inside zesto-core.h.
+\n
+\n
+\n
+  Interface data structures (zesto-core.h):
+  \n
+  \code uint64_t request_id \endcode
+  - ID for request sent to cache, so when response comes back we can locate the corresponding request
+  - Used as the index field for a map structure described below
+  .
+  \code 
+  struct Preq {
+      int index;
+      int thread_id;
+      qword_t action_id;
+  };
+  \endcode
+  - Holds information ( \e index and \e action_id) needed by Zesto to further process its load queue and store queue once response comes back from cache
+  - \e thread_id is needed to make sure the thread that receives the response is the same thread that generated the request
+  .
+  \code std::map<int, Preq> my_map; \endcode
+  - A map storage that uses \e request_id to as the key value and \e Preq as the mapped value
+  .
+  \code
+  enum { Input0 };
+  enum { Output0 };
+  \endcode
+  - \e Input0 is the integer port number for input from cache
+  - \e Output0 is the integer port number for output to cahce
+  - We assume a single processor-cache channel
+  .
+  \code void cache_response_handler(int src, manifold::simple_cache::cache_req* req) \endcode
+  - event handler for processing cache responses
+  - \e src is the integer input port number 
+  - \e req is the message of the type cache_req received from cache
+  - Simply push each \e req received to the back of a list structure described below
+  .
+  \code std::list<manifold::simple_cache::cache_req*> m_input_from_cache; \endcode
+  - A list that holds all the cache responses received
+  - At each tick, all entries in the list is processed and poped off the list
+  .
+  \n
+  \n
+  Interface Implementation (ZPIPE-exec/exec-DPM.cpp ):
+  The Zesto/cache interface is implemented in the following 3 functions:
+  \code void core_exec_DPM_t::LDQ_schedule(void) \endcode
+  - Schedules load request
+  .
+  \code bool core_exec_DPM_t::STQ_deallocate_std(struct uop_t * const uop) \endcode
+  - Schedules store request
+  .
+  \code void core_exec_DPM_t::memory_callbacks(void) \endcode
+  - Handles memory callbacks and updates the load queue and the store queue
+  .
+  \n
+  \n
+@subsection fe_zesto Front End/Zesto Interface
+  Figure 3 shows the class diagram of the Front End/Zesto interface. There are currently 3 front ends available, namely, PIN trace (trace_core_t), Qsim Library (qsimlib_core_t) and Qsim Server (qsimclient_core_t). The core for each front end inherits from Zesto base core, which is a Manifold component. To use a specific frontend, simply include the corresponding .h file in your program ( see Example section for more details). Important functions for each of the 3 front ends are described below:
+  \image html class_dia.png "Figure 2 - Overview of the Zesto Detailed Pipeline Model (DPM)"
+  PIN trace: 
+  \n
+  -# Constructor:
+  \code trace_core_t(const int core_id, char* config, const char* trace) \endcode
+  - \e core_id is the number used to identify the core
+  - \e config is the processor configuration file
+  - \e trace is the PIN trace file
+  .
+  
+  Both Qsim Library and Qsim Server front ends make use of Qsim, a QEMU-based emulation library for microarchitecture simulation. For more information on Qsim, please visit:
+  <ul><li>http://www.cdkersey.com/qsim-web</ul> 
+  Qsim Library: 
+  \n
+  -# Constructor:
+  \code qsimlib_core_t(const int core_id, char* config, Qsim::OSDomain* osd, int cpuid) \endcode
+  - \e osd is a Qsim OSDomain object. For more information on how to properly create a Qsim OSDomain, pleases refer to the Qsim Documentation.
+  .
+  Qsim Server:
+  \n
+  Using Qsim Server as front end involves starting Qsim server on one machine, and then starting Qsim client programs on other machines to connect to the server. For more information, please refer to the Qsim Documentation.
+  -# Constructor:
+  \code qsimclient_core_t(const int core_id, char* config, int cpuid, const QsimClient_Settings& sets) \endcode
+  - \e sets specifies the server's ip address and port number to connect to. The structure \e QsimClient_Settings is shown below.
+  - \code struct QsimClient_Settings {
+      QsimClient_Settings(const char* s, int p) : server(s), port(p) {} 
+      const char* server;
+      int port;
+  };
+  \endcode
+    - \e server is the ip address of the server node
+    - \e port is the port number to connect to
+  .
+  .
+
+  
+\n
+@section sec_using Using Zesto
+
+@subsection download Download
+To inspect the Zesto source code, visit the following link: \n
+<ul><li> https://svn.ece.gatech.edu/repos/Manifold/trunk/code/models/processor/zesto</ul>
+
+@subsection installation Installation
+
+To use Zesto, the pre-requisite is to install the Manifold kernel. Please refer to the Manifold spec for steps on how to proceed with this step. 
+
+
+@subsection howto To write a simulation program
+
+To use Zesto as part of your simulation program follow the following steps.
+
+-# Call \c Manifold::Init().
+-# Create a specific zesto core object based on the front end you want to use. \n
+For example, to use PIN trace you may do the following:
+\code
+  int CoreID = Component::Create<trace_core_t,int,char*,char*>(0,rand_id,"6.cfg","itrace_array.out");
+  trace_core_t* current_core = Component::GetComponent<trace_core_t>(CoreID);
+\endcode
+To use Qsim library, you may do the following:
+\code
+  Qsim::OSDomain* qsim_osd = new Qsim::OSDomain(1, "/your path to image/linux/bzImage");
+  int CoreID = Component::Create<qsimlib_core_t,int,char*, Qsim::OSDomain*>(0,0,"6.cfg", qsim_osd);
+\endcode
+To use Qsim Server, you may do the following:
+\code
+  QsimClient_Settings proc_settings(server, port);
+  node_cids[i].proc_cid = Component :: Create<qsimclient_core_t>(lp_idx, i, (char*)"6.cfg", cpuid, proc_settings);
+  qsimclient_core_t* proc = Component :: GetComponent<qsimclient_core_t>(node_cids[i].proc_cid);
+\endcode
+-# Create a \c Clock object.
+-# Create a \c Cache object.
+-# Connect the core to the cache using the \c Manifold::Connect function.
+-# Specify a simulation stop time by calling \c Manifold::StopAt.
+-# Start the simulation by calling \c Manifold::Run.
+
+
+@subsection example Example
+The following example demonstrates how Zesto can be used in building a simulation program using
+the Manifold framework. It uses PIN trace as front end.
+
+\code
+#include <iostream>
+#include "kernel/manifold.h"
+#include "kernel/component.h"
+#include "kernel/link.h"
+#include "kernel/clock.h"
+#include "simple_cache.h"
+#include "../../trace-core.h"
+#include <assert.h>
+#include <stdlib.h>
+#include <time.h>
+
+using namespace std;
+using namespace manifold::kernel;
+using namespace manifold::simple_cache;
+using namespace manifold::zesto;
+
+
+int main(int argc, char *argv[])
+{
+  Clock globalClock(1000.0);
+
+  Manifold::Init();
+
+  srand( time(NULL) );
+  int rand_id = rand() % 100000 + 1;
+
+  int CoreID = Component::Create<trace_core_t,int,char*,char*>(0,rand_id,"6.cfg","itrace_array.out");
+  trace_core_t* current_core = Component::GetComponent<trace_core_t>(CoreID);
+  Clock::Register<core_t> (current_core, &core_t::tick, &core_t::tock);
+  int CacheID = Component::Create<simple_cache, int>(0, 1);
+  Manifold::Connect(CoreID, trace_core_t::Output0, CacheID, simple_cache::Input0, &simple_cache::LinkArrival, 2);
+  Manifold::Connect(CacheID, simple_cache::Output0, CoreID, trace_core_t::Input0, &trace_core_t::cache_response_handler, 2);
+
+  assert(current_core->id == rand_id);
+  assert(current_core->id == current_core->current_thread->id);
+  assert(current_core->id == current_core->current_thread->current_core);
+  Manifold::StopAt(80000);
+  Manifold::Run();
+  Manifold::Finalize();
+}
+\endcode
+\n
+
+@section faq Frequently Asked Questions
+
+1. Where can I find information for Qsim?
+- http://www.cdkersey.com/qsim-web
+
+2. Where can I find information for PIN utility?
+- http://www.pintool.org
+
+3. What command do I use to generate PIN traces?
+- pin -t obj-ia32/itrace.so -- ./name_of_your_executable
+
+ 
+
+*/
+

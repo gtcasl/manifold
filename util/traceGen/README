@@ -1,0 +1,24 @@
+Files in this directory are used to generate trace files for Manifold using QSim server.
+
+To generate trace files, follow the steps below:
+
+1. Go to models/processor/zesto, make a backup copy of qsimclient-core.cc and qsimclient-core.h.
+Then copy the two files in this directory to zesto.
+
+2. Open qsimclient-core.cc. At the beginning of the file, modify the definition
+of FILENAME to the name you want for your trace files.
+
+3. Compile Zesto.
+
+4. Build the simulator under simulator/smp/QSimClient.
+
+5. Modify the simulator's configure file (mainly the nubmer of cycles) according to your needs.
+
+6. Start QSim server.
+
+7. Start the simulator.
+
+
+If you didn't do Step 2, and find the file names are not what you want, you can
+use the script rename.sh to rename the trace files.
+

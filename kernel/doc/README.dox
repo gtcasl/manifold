@@ -1,0 +1,726 @@
+/** @mainpage Manifold 1.0 Parallel Simulation Kernel
+
+@section sec_intro Introduction
+Manifold is a system software infrastructure used to simulate modern and future many core systems accurately modeling their outputs and performance metrics based on inputs. Manifold integrates mature point tools and modeling techniques for all significant many core components via standardized interfaces. Interfaces to event, time, and synchronization services use known and tested parallel discrete event and time stepped simulation techniques to enable parallel simulation of a many core architecture. Manifold is developed under Linux and Mac OS X, but is set-up to be highly portable. As a result, it runs on most other Unix flavors as well. This document focuses on the kernel API.
+
+\n
+
+
+@section sec_overview Overview
+Features of the Manifold kernel:
+- Supports two types of events
+  -# periodic events: Events triggered by the clock (timestamp in units of clock cycles or half clock cycles)
+  -# non-periodic events: e.g. input events to a component triggered by the output of another (timestamp in units of seconds)
+- Supports two simulation modes
+  -# sequential simulation
+  -# parallel simulation 
+- Extensive use of templates offers great flexibility of data types
+  -# primitive types (uint32_t & uint64_t) are supported
+  -# user defined types (class) are supported
+- Supports multiple operating systems
+  -# fully tested on Ubuntu and fedora
+  -# will support more in the future
+\n
+.
+Below is an overview of three major Manifold kernel classes: <em>Clock</em>, <em>Component</em> and <em>Manifold</em>.
+
+<em>Clock</em>
+- represents a clock
+- maintains a list of clock-triggered objects
+- maintains a list of events scheduled for clock ticks
+
+<em>Component</em>
+- base class for all modeled components
+
+<em>Manifold</em>
+- provides scheduling functions
+- provides functions for setting up component interconnections
+
+\n
+
+
+@section sec_using Using Manifold Parallel Simulation Kernel
+\n
+
+@subsection download Download
+To inspect the Manifold kernel code, visit the following link: \n
+<ul><li> https://svn.ece.gatech.edu/repos/Manifold/trunk/code/kernel/</ul>
+
+To download the code, run the SVN command:
+<ul><li>svn checkout https://svn.ece.gatech.edu/repos/Manifold/trunk/code/kernel</ul>
+
+\n
+@subsection installation Installation
+
+After unpacking the distribution file, execute the following command to build and
+install the Manifold simulation kernel.
+
+\verbatim
+./configure [--prefix=INSTALL_DIR]
+make
+make install
+\endverbatim
+
+For the \p configure command, you can optionally specify the installation
+direcotry with the  \c --prefix option. The default installation directory
+is \c /usr/local.
+
+
+\n
+
+@subsection howto How to Use The Parallel Simulation Kernel
+\par Basic Manifold kernel modeling procedure
+
+To run a simulation using the parallel kernel, the steps below should be followed:
+  -#  At the beginning of the simulation, call Manifold::Init(int argc, char** argv) to initialize the MPI execution environment.  
+  -#  The major components of the model should inherit from the kernel class <em>Component</em> and should be instantiated using Component::Create().
+  -#  Create clock(s).
+  -#  Clock-driven components should have an UpTick and DownTick Handler and should register with the corresponding clock(s).
+  -#  Connect components using the kernel function \c Manifold::Connnect(). (Or call the scheduling functions directly, if the sending component and the receiving component reside in the same LP.) Modeled objects should have a link arrival handler if it will be receiving events.
+  -#  Set a simulation stop time.
+  -#  Call \c Manifold::Run().
+  -#  At the end of the simulation, call Manifold::Finalize().
+
+\par Creating a model
+
+Developing a simulation with Manifold involves instantiating components, clocks and connecting components (or scheduling events directly). What follow are detailed descriptions of the interfaces, member functions and member variables of the kernel API.
+\n
+
+-# <b> Instantiating Components</b> \n
+  To provide more flexibility there are five variations of the templated \c Component::Create() functions, depending
+  on the number of arguments passed to the constructor. The Lp ID of the component must be specified.
+  \code template<typename T>
+        CompId_t Component::Create<T>(LpId_t); \endcode
+  \code template<typename T, typename T1>
+        CompId_t Component::Create<T>(LpId_t, const T1&); \endcode
+  \code template<typename T, typename T1, typename T2>
+        CompId_t Component::Create<T>(LpId_t, const T1&, const T2&); \endcode
+  \code template <typename T, typename T1, typename T2, typename T3> 
+        CompId_t Component::Create<T>(LpId_t, const T1&, const T2&, const T3&); \endcode
+  \code template <typename T, typename T1, typename T2, typename T3, typename T4> 
+        CompId_t Component::Create<T>(LpId_t,const T1&, const T2&, const T3&, const T4&); \endcode        
+    - \e T is the type of component that is being created.
+    - \e LpId_t is the integer type logical process(LP) ID.
+    - <em>T1, T2, T3 & T4</em> are the arguments that are passed to the constructor of the component being created.
+    - function returns \e CompId_t, which is the integer type ID number of the component across the simulation. \n
+    .
+
+\n
+-# <b> Instantiating Clocks and Registering Components </b>\n
+  To create a clock, call the \e Clock constructor:
+  \code Clock::Clock(double); \endcode
+  \n
+  The only argument passed to the \e Clock constructor is the frequency of the clock with units of ticks/second. Each time the \e Clock constructor is called, a new clock is generated and added  to the global list of clocks if it wasn't already created. The very first clock that is generated is regarded as the default clock.
+  \n
+  \n
+  Two types of templated Clock::Register() functions are provided depending on whether the component is registered to the default clock or a specified clock.
+  In order to register a component with the default clock, call the following function:
+  \code template <typename O> 
+          tickObjBase* Clock::Register(O* obj, void(O::*rising)(void), void(O::*falling)(void)); \endcode 
+    - \e obj is a pointer to the component to register with the clock.
+    - \e rising is a pointer to the member function that will be called on a rising edge. This function must not take any arguments or return any values.
+    - \e falling is a pointer to the member function that will be called on a falling edge. This function must not take any arguments or return any values.
+    - function returns a tickObjBase pointer used to disable/enable tick handlers.
+    .
+    \n
+  To register a component with a specified clock, call the following function instead:
+    \code template <typename O> 
+          tickObjBase* Clock::Register(Clock& whichClock, O* obj, void(O::*rising)(void), void(O::*falling)(void)); \endcode 
+      - \e whichClock is the specified clock to register to.
+      .
+      \n
+      \n
+-# <b> Connecting Components</b> \n
+There are five Connect functions provided. To connect an output from a component to an input on a second
+component (Figure 1), a link arrival handler must be provided for the receiving component. Two template
+parameters, T and T2, are needed for the handler function. T is always the type of the receiving component.
+This is needed to insure the callback function is of the right type. The handlers MUST all have the first
+parameter as an int, which indicates the input number the arrival is for. The second parameter is of type T2,
+which is the type of the data being transmitted, and currently Manifold supports three data types: uint64_t,
+uint32_t and user-defined data type.
+\n
+\image html Connect.png "Figure 1 - The Manifold Connect() Function " 
+\n
+There are some variations of the required API. If latency is specified in units of clock ticks for the default clock, use:
+  \code template <typename T, typename T2>
+          void Manifold::Connect(CompId_t sourceComponent, int sourceIndex, CompId_t dstComponent, int dstIndex, void (T::*handler)(int, T2),Ticks_t tickLatency) throw (LinkTypeMismatchException); \endcode
+    - \e sourceComponent is the sending component's unique id.
+    - \e sourceIndex is the source index(port) number.
+    - \e dstComponent is the destination component's unique id.
+    - \e dstIndex is the destination index(port) number.           
+    - \e handler is the callback function pointer that expects incoming data of type T2.
+    - \e tickLatency specifies the link latency in ticks.
+    - \e LinkTypeMismatchException is used to prevent type mismatch error, i.e., in a one(output)-to-many(inputs) connection, data being sent on each connection must be the same type T2. 
+    .
+    \n
+If latency is specified in units of half clock ticks for the default clock, use:
+  \code template <typename T, typename T2>
+          void Manifold::ConnectHalf(CompId_t sourceComponent, int sourceIndex, CompId_t dstComponent, int dstIndex, void (T::*handler)(int, T2),Ticks_t tickLatency) throw (LinkTypeMismatchException); \endcode
+    - \e tickLatency specifies the link latency in half ticks.     
+    .
+\n
+If latency is specified in units of clock ticks for the specified clock, use:
+  \code template <typename T, typename T2>
+          void Manifold::ConnectClock(CompId_t sourceComponent, int sourceIndex, CompId_t dstComponent, int dstIndex, Clock& c, void (T::*handler)(int, T2),Ticks_t tickLatency) throw (LinkTypeMismatchException); \endcode
+    - \e c is the specified reference clock for clock ticks.
+    - \e tickLatency specifies the link latency in ticks.     
+    .
+\n
+If latency is specified in units of half clock ticks for the specified clock, use:
+  \code template <typename T, typename T2>
+          void Manifold::ConnectClockHalf(CompId_t sourceComponent, int sourceIndex, CompId_t dstComponent, int dstIndex, Clock& c, void (T::*handler)(int, T2),Ticks_t tickLatency) throw (LinkTypeMismatchException); \endcode
+    - \e c is the specified reference clock for clock ticks.
+    - \e tickLatency specifies the link latency in half ticks.     
+    .
+\n
+If latency is specified in units of seconds, use:
+  \code template <typename T, typename T2>
+          void Manifold::ConnectTime(CompId_t sourceComponent, int sourceIndex, CompId_t dstComponent, int dstIndex, void (T::*handler)(int, T2),Time_t latency) throw (LinkTypeMismatchException); \endcode
+    - \e latency specifies the link latency in seconds.     
+    .      
+\n
+\n
+<b>Serialization/deserialization</b>
+\n
+User-defined data types require serialization/deserialization when sent
+across LP boundaries. Therefore, the Manifold kernel provides the following template functions and default
+implementations.
+\n
+  \code template<typename T> size_t Get_serialize_size(const T& data) \endcode
+    - This function returns the size of the serialized data.
+    .
+  \code template<typename T> size_t Get_serialize_size(const T* data) \endcode
+    - This function returns the size of the serialized data.
+    .
+  \code template<typename T> size_t Serialize(const T& data, unsigned char* buf) \endcode
+    - \e data is the data to be serialized
+    - \e buf is the caller-provided buffer for holding the serialized data
+    - The return value is the length of the serialized data.
+    .
+  \code template<typename T> size_t Serialize(T* data, unsigned char* buf) \endcode
+    - Same as above, except the first parameter is a pointer.
+    .
+  \code template<typename T> size_t Serialize(const T* data, unsigned char* buf) \endcode
+    - Same as above, except the first parameter is a constant pointer.
+    .
+  \code template<typename T> T Deserialize(unsigned char* buf, int) \endcode
+    - \e buf is the buffer holding serialized data
+    - The int parameter is only used to differentiate this function from the one below.
+    - This function takes the serialized data and de-serialize it.
+    .
+  \code template<typename T> T* Deserialize(unsigned char* buf) \endcode
+    - Same as above, except that it returns a pointer.
+    .
+\n
+<b>For most cases, the default implementation should suffice. However, if one of the following conditions is
+true, the modelers must provide specialization of the above templated functions.</b>
+  - The data type contains pointers to other data.
+  - The simulation is running on heterogeneous machines.
+  .
+\n
+\n
+-# <b> Scheduling Events </b>
+\n
+There are two ways to schedule events: (1) connect components, and use Component::Send() or Component::SendTick(), (2)call Schedule() directly. Scheduling functions allow the user to specify a callback function with as many as up to four parameters.
+    \n
+    - Scheduling Events after connecting components:
+      \n
+      A component can schedule an event by calling \c Send() function:
+      \code template <typename T>
+            void Component::Send(int OutputIndex, T data); \endcode   
+      - \e OutputIndex is the integer type output port number 
+      - \e data is the data to be sent of an arbitrary type T 
+      .
+      \code template <typename T>
+            void Component::SendTick(int OutputIndex, T data, Ticks_t delay); \endcode    
+      - \e delay is the latency of the connection with units of ticks
+      .           
+      \n 
+    - Scheduling Events by calling scheduling functions directly:
+    \n
+    A total of 50 scheduling functions are provided. These functions can only be called on components within the same LP.
+    \n
+    \n
+    This set are for "tick" events, that  are scheduled on integral ticks with respect to the default (first defined) clock.
+    \code   template <typename T, typename OBJ>
+            static TickEventId Schedule(Ticks_t t, void(T::*handler)(void), OBJ* obj); \endcode
+    \code   template <typename T, typename OBJ,
+                        typename U1, typename T1>
+            static TickEventId Schedule(Ticks_t t, void(T::*handler)(U1), OBJ* obj, T1 t1);\endcode
+    \code   template <typename T, typename OBJ,
+                        typename U1, typename T1,
+                        typename U2, typename T2>
+            static TickEventId Schedule(Ticks_t t, void(T::*handler)(U1, U2), OBJ* obj, T1 t1, T2 t2);\endcode
+    \code   template <typename T, typename OBJ,
+                        typename U1, typename T1,
+                        typename U2, typename T2,
+                        typename U3, typename T3>
+            static TickEventId Schedule(Ticks_t t, void(T::*handler)(U1, U2, U3), OBJ* obj, T1 t1, T2 t2, T3 t3);\endcode            
+    \code   template <typename T, typename OBJ,
+                        typename U1, typename T1,
+                        typename U2, typename T2,
+                        typename U3, typename T3,
+                        typename U4, typename T4>
+            static TickEventId Schedule(Ticks_t t, void(T::*handler)(U1, U2, U3, U4), OBJ* obj, T1 t1, T2 t2, T3 t3, T4 t4);\endcode  
+            - \e t is the latency in ticks with respect to the default clock.
+            - \e handler is a N (N = 0, 1, 2, 3, 4)  parameter callback function pointer. 
+            - \e obj is the object the callback function will be called on.
+            - <em> t1, t2, t3 & t4 </em> are the parameters in the callback function list.
+            - function returns unique tick event id, which can be used the cancel the event
+            .
+    \n             
+    This set are for "tick" events, that are scheduled with respect to the default (first defined) clock. The units are half-ticks. If presently on a rising edge, a value of 3 (for example) results in a falling edge event 1.5 cycles in the future.
+    \code   template <typename T, typename OBJ>
+            static TickEventId ScheduleHalf(Ticks_t t, void(T::*handler)(void), OBJ* obj); \endcode
+    \code   template <typename T, typename OBJ,
+                        typename U1, typename T1>
+            static TickEventId ScheduleHalf(Ticks_t t, void(T::*handler)(U1), OBJ* obj, T1 t1);\endcode
+    \code   template <typename T, typename OBJ,
+                        typename U1, typename T1,
+                        typename U2, typename T2>
+            static TickEventId ScheduleHalf(Ticks_t t, void(T::*handler)(U1, U2), OBJ* obj, T1 t1, T2 t2);\endcode
+    \code   template <typename T, typename OBJ,
+                        typename U1, typename T1,
+                        typename U2, typename T2,
+                        typename U3, typename T3>
+            static TickEventId ScheduleHalf(Ticks_t t, void(T::*handler)(U1, U2, U3), OBJ* obj, T1 t1, T2 t2, T3 t3);\endcode            
+    \code   template <typename T, typename OBJ,
+                        typename U1, typename T1,
+                        typename U2, typename T2,
+                        typename U3, typename T3,
+                        typename U4, typename T4>
+            static TickEventId ScheduleHalf(Ticks_t t, void(T::*handler)(U1, U2, U3, U4), OBJ* obj, T1 t1, T2 t2, T3 t3, T4 t4);\endcode  
+            - \e t is the latency in half ticks with respect to the default clock.
+            - \e handler is a N (N = 0, 1, 2, 3, 4)  parameter callback function pointer. 
+            - \e obj is the object the callback function will be called on.
+            - <em> t1, t2, t3 & t4 </em> are the parameters in the callback function list.
+            - function returns unique tick event id, which can be used the cancel the event 
+            .
+    \n
+    This set are for "tick" events, that  are scheduled on integral ticks with respect to the specified clock.
+    \code   template <typename T, typename OBJ>
+            static TickEventId ScheduleClock(Ticks_t t, Clock& c, void(T::*handler)(void), OBJ* obj); \endcode
+    \code   template <typename T, typename OBJ,
+                        typename U1, typename T1>
+            static TickEventId ScheduleClock(Ticks_t t, Clock& c, void(T::*handler)(U1), OBJ* obj, T1 t1);\endcode
+    \code   template <typename T, typename OBJ,
+                        typename U1, typename T1,
+                        typename U2, typename T2>
+            static TickEventId ScheduleClock(Ticks_t t, Clock& c, void(T::*handler)(U1, U2), OBJ* obj, T1 t1, T2 t2);\endcode
+    \code   template <typename T, typename OBJ,
+                        typename U1, typename T1,
+                        typename U2, typename T2,
+                        typename U3, typename T3>
+            static TickEventId ScheduleClock(Ticks_t t, Clock& c, void(T::*handler)(U1, U2, U3), OBJ* obj, T1 t1, T2 t2, T3 t3);\endcode            
+    \code   template <typename T, typename OBJ,
+                        typename U1, typename T1,
+                        typename U2, typename T2,
+                        typename U3, typename T3,
+                        typename U4, typename T4>
+            static TickEventId ScheduleClock(Ticks_t t, Clock& c, void(T::*handler)(U1, U2, U3, U4), OBJ* obj, T1 t1, T2 t2, T3 t3, T4 t4);\endcode  
+            - \e t is the latency in ticks with respect to the specified clock.
+            - \c c is the reference clock for latency.
+            - \e handler is a N (N = 0, 1, 2, 3, 4)  parameter callback function pointer. 
+            - \e obj is the object the callback function will be called on.
+            - <em> t1, t2, t3 & t4 </em> are the parameters in the callback function list.
+            - function returns unique tick event id, which can be used the cancel the event
+            .
+    \n
+    This set are for "tick" events, that  are scheduled on integral half-ticks with respect to the specified clock.
+    \code   template <typename T, typename OBJ>
+            static TickEventId ScheduleClockHalf(Ticks_t t, Clock& c, void(T::*handler)(void), OBJ* obj); \endcode
+    \code   template <typename T, typename OBJ,
+                        typename U1, typename T1>
+            static TickEventId ScheduleClockHalf(Ticks_t t, Clock& c, void(T::*handler)(U1), OBJ* obj, T1 t1);\endcode
+    \code   template <typename T, typename OBJ,
+                        typename U1, typename T1,
+                        typename U2, typename T2>
+            static TickEventId ScheduleClockHalf(Ticks_t t, Clock& c, void(T::*handler)(U1, U2), OBJ* obj, T1 t1, T2 t2);\endcode
+    \code   template <typename T, typename OBJ,
+                        typename U1, typename T1,
+                        typename U2, typename T2,
+                        typename U3, typename T3>
+            static TickEventId ScheduleClockHalf(Ticks_t t, Clock& c, void(T::*handler)(U1, U2, U3), OBJ* obj, T1 t1, T2 t2, T3 t3);\endcode            
+    \code   template <typename T, typename OBJ,
+                        typename U1, typename T1,
+                        typename U2, typename T2,
+                        typename U3, typename T3,
+                        typename U4, typename T4>
+            static TickEventId ScheduleClockHalf(Ticks_t t, Clock& c, void(T::*handler)(U1, U2, U3, U4), OBJ* obj, T1 t1, T2 t2, T3 t3, T4 t4);\endcode  
+            - \e t is the latency in half ticks with respect to the specified clock.
+            - \c c is the reference clock for latency.
+            - \e handler is a N (N = 0, 1, 2, 3, 4)  parameter callback function pointer. 
+            - \e obj is the object the callback function will be called on.
+            - <em> t1, t2, t3 & t4 </em> are the parameters in the callback function list.
+            - function returns unique tick event id, which can be used the cancel the event
+            .
+    \n
+    This set are for member function callbacks with floating point time
+    \code   template <typename T, typename OBJ>
+            static EventId ScheduleTime(double t, void(T::*handler)(void), OBJ* obj); \endcode
+    \code   template <typename T, typename OBJ,
+                        typename U1, typename T1>
+            static EventId ScheduleTime(double t, void(T::*handler)(U1), OBJ* obj, T1 t1);\endcode
+    \code   template <typename T, typename OBJ,
+                        typename U1, typename T1,
+                        typename U2, typename T2>
+            static EventId ScheduleTime(double t, void(T::*handler)(U1, U2), OBJ* obj, T1 t1, T2 t2);\endcode
+    \code   template <typename T, typename OBJ,
+                        typename U1, typename T1,
+                        typename U2, typename T2,
+                        typename U3, typename T3>
+            static EventId ScheduleTime(double t, void(T::*handler)(U1, U2, U3), OBJ* obj, T1 t1, T2 t2, T3 t3);\endcode            
+    \code   template <typename T, typename OBJ,
+                        typename U1, typename T1,
+                        typename U2, typename T2,
+                        typename U3, typename T3,
+                        typename U4, typename T4>
+            static EventId ScheduleTime(double t, void(T::*handler)(U1, U2, U3, U4), OBJ* obj, T1 t1, T2 t2, T3 t3, T4 t4);\endcode  
+            - \e t is the latency in time with respect to the default clock.
+            - \e handler is a N (N = 0, 1, 2, 3, 4)  parameter callback function pointer. 
+            - \e obj is the object the callback function will be called on.
+            - <em> t1, t2, t3 & t4 </em> are the parameters in the callback function list.
+            - function returns unique time event id, which can be used the cancel the event
+            .
+    \n
+    This set are schedulers for static callback functions with integral (ticks) time using the default clock
+    \code   static TickEventId Schedule(Ticks_t t, void(*handler)(void)); \endcode
+    \code   template <typename U1, typename T1>
+            static TickEventId Schedule(Ticks_t t, void(*handler)(U1), T1 t1);\endcode
+    \code   template <typename U1, typename T1,
+                        typename U2, typename T2>
+            static TickEventId Schedule(Ticks_t t, void(*handler)(U1, U2), T1 t1, T2 t2);\endcode
+    \code   template <typename U1, typename T1,
+                        typename U2, typename T2,
+                        typename U3, typename T3>
+            static TickEventId Schedule(Ticks_t t, void(*handler)(U1, U2, U3), T1 t1, T2 t2, T3 t3);\endcode            
+    \code   template <typename U1, typename T1,
+                        typename U2, typename T2,
+                        typename U3, typename T3,
+                        typename U4, typename T4>
+            static TickEventId Schedule(Ticks_t t, void(*handler)(U1, U2, U3, U4), T1 t1, T2 t2, T3 t3, T4 t4);\endcode  
+            - \e t is the latency in ticks with respect to the default clock.
+            - \e handler is a N (N = 0, 1, 2, 3, 4)  parameter static callback function pointer. 
+            - <em> t1, t2, t3 & t4 </em> are the parameters in the callback function list.
+            - function returns unique tick event id, which can be used the cancel the event
+            .
+    \n
+    This set are schedulers for static callback functions with half (ticks) time using the default clock
+    \code   static TickEventId ScheduleHalf(Ticks_t t, void(*handler)(void)); \endcode
+    \code   template <typename U1, typename T1>
+            static TickEventId ScheduleHalf(Ticks_t t, void(*handler)(U1), T1 t1);\endcode
+    \code   template <typename U1, typename T1,
+                        typename U2, typename T2>
+            static TickEventId ScheduleHalf(Ticks_t t, void(*handler)(U1, U2), T1 t1, T2 t2);\endcode
+    \code   template <typename U1, typename T1,
+                        typename U2, typename T2,
+                        typename U3, typename T3>
+            static TickEventId ScheduleHalf(Ticks_t t, void(*handler)(U1, U2, U3), T1 t1, T2 t2, T3 t3);\endcode            
+    \code   template <typename U1, typename T1,
+                        typename U2, typename T2,
+                        typename U3, typename T3,
+                        typename U4, typename T4>
+            static TickEventId ScheduleHalf(Ticks_t t, void(*handler)(U1, U2, U3, U4), T1 t1, T2 t2, T3 t3, T4 t4);\endcode  
+            - \e t is the latency in half ticks with respect to the default clock.
+            - \e handler is a N (N = 0, 1, 2, 3, 4)  parameter static callback function pointer. 
+            - <em> t1, t2, t3 & t4 </em> are the parameters in the callback function list.
+            - function returns unique tick event id, which can be used the cancel the event
+            .
+    \n
+    This set are schedulers for static callback functions with integral (ticks) time using the specified clock
+    \code   static TickEventId ScheduleClock(Ticks_t t, Clock& c, void(*handler)(void)); \endcode
+    \code   template <typename U1, typename T1>
+            static TickEventId ScheduleClock(Ticks_t t, Clock& c, void(*handler)(U1), T1 t1);\endcode
+    \code   template <typename U1, typename T1,
+                        typename U2, typename T2>
+            static TickEventId ScheduleClock(Ticks_t t, Clock& c, void(*handler)(U1, U2), T1 t1, T2 t2);\endcode
+    \code   template <typename U1, typename T1,
+                        typename U2, typename T2,
+                        typename U3, typename T3>
+            static TickEventId ScheduleClock(Ticks_t t, Clock& c, void(*handler)(U1, U2, U3), T1 t1, T2 t2, T3 t3);\endcode            
+    \code   template <typename U1, typename T1,
+                        typename U2, typename T2,
+                        typename U3, typename T3,
+                        typename U4, typename T4>
+            static TickEventId ScheduleClock(Ticks_t t, Clock& c, void(*handler)(U1, U2, U3, U4), T1 t1, T2 t2, T3 t3, T4 t4);\endcode  
+            - \e t is the latency in ticks with respect to the specified clock.
+            - \e c is the reference clock the latency is based on
+            - \e handler is a N (N = 0, 1, 2, 3, 4)  parameter static callback function pointer. 
+            - <em> t1, t2, t3 & t4 </em> are the parameters in the callback function list.
+            - function returns unique tick event id, which can be used the cancel the event
+            .
+    \n
+    This set are schedulers for static callback functions with half (ticks) time using the specified clock
+    \code   static TickEventId ScheduleClockHalf(Ticks_t t, Clock& c, void(*handler)(void)); \endcode
+    \code   template <typename U1, typename T1>
+            static TickEventId ScheduleClockHalf(Ticks_t t, Clock& c, void(*handler)(U1), T1 t1);\endcode
+    \code   template <typename U1, typename T1,
+                        typename U2, typename T2>
+            static TickEventId ScheduleClockHalf(Ticks_t t, Clock& c, void(*handler)(U1, U2), T1 t1, T2 t2);\endcode
+    \code   template <typename U1, typename T1,
+                        typename U2, typename T2,
+                        typename U3, typename T3>
+            static TickEventId ScheduleClockHalf(Ticks_t t, Clock& c, void(*handler)(U1, U2, U3), T1 t1, T2 t2, T3 t3);\endcode            
+    \code   template <typename U1, typename T1,
+                        typename U2, typename T2,
+                        typename U3, typename T3,
+                        typename U4, typename T4>
+            static TickEventId ScheduleClockHalf(Ticks_t t, Clock& c, void(*handler)(U1, U2, U3, U4), T1 t1, T2 t2, T3 t3, T4 t4);\endcode  
+            - \e t is the latency in half ticks with respect to the specified clock.
+            - \e c is the reference clock the latency is based on
+            - \e handler is a N (N = 0, 1, 2, 3, 4)  parameter static callback function pointer. 
+            - <em> t1, t2, t3 & t4 </em> are the parameters in the callback function list.
+            - function returns unique tick event id, which can be used the cancel the event
+            .
+    \n
+    This set are schedulers for static callback functions with floating point time
+    \code   static EventId ScheduleTime(double t, void(*handler)(void)); \endcode
+    \code   template <typename U1, typename T1>
+            static EventId ScheduleTime(double t, void(*handler)(U1), T1 t1);\endcode
+    \code   template <typename U1, typename T1,
+                        typename U2, typename T2>
+            static EventId ScheduleTime(double t, void(*handler)(U1, U2), T1 t1, T2 t2);\endcode
+    \code   template <typename U1, typename T1,
+                        typename U2, typename T2,
+                        typename U3, typename T3>
+            static EventId ScheduleTime(double t, void(*handler)(U1, U2, U3), T1 t1, T2 t2, T3 t3);\endcode            
+    \code   template <typename U1, typename T1,
+                        typename U2, typename T2,
+                        typename U3, typename T3,
+                        typename U4, typename T4>
+            static EventId ScheduleTime(double t, void(*handler)(U1, U2, U3, U4), T1 t1, T2 t2, T3 t3, T4 t4);\endcode  
+            - \e t is the latency in time with respect to the default clock.
+            - \e handler is a N (N = 0, 1, 2, 3, 4)  parameter static callback function pointer. 
+            - <em> t1, t2, t3 & t4 </em> are the parameters in the callback function list.
+            - function returns unique time event id, which can be used the cancel the event
+            .       
+      \n
+      \n
+-# <b> Other Important API Functions </b>   
+    - In \e Component Class:
+      \code template <typename T>
+            static T* GetComponent(CompId_t);\endcode
+      Static function to get the original component pointer by component id.
+      \n
+      \n
+      \code static Component* GetComponent(CompId_t);\endcode
+      Static function to get the component, returning base class pointer.
+      \n
+      \n
+      \n
+    - In \e Manifold Class:
+      \code static void Run();\endcode
+      Run the simulation.
+      \n
+      \n
+      \code static void Stop();\endcode
+      Stop the simulation.
+      \n
+      \n
+      \code static void StopAtTime(Time_t);\endcode
+      Stop at the specified time.
+      \n
+      \n
+      \code static void StopAt(Ticks_t);   \endcode
+      Stop at specified tick, based on the default clock.  
+      \n
+      \n
+      \code static void StopAtClock(Ticks_t, Clock&);\endcode    
+      Stop at ticks, based on specified clock.
+      \n
+      \n
+      \code static double Now(); \endcode    
+      Return the current simulation time
+      \n
+      \n
+      \code static Ticks_t NowTicks(); \endcode    
+      Return the current simulation time in ticks, default clock.
+      \n
+      \n
+      \code static Ticks_t NowHalfTicks(); \endcode    
+      Return the current simulation time in half ticks, default clock.     
+      \n
+      \n
+      \code static Ticks_t NowTicks(Clock&); \endcode    
+      Return the current simulation time in ticks, specified clock.      
+      \n
+      \n
+      \code static Ticks_t NowHalfTicks(); \endcode    
+      Return the current simulation time in half ticks, specified clock.                  
+
+    
+    
+            
+@subsection example Example
+To give a simple example, the system shown in Figure 2 is implemented using Manifold API.
+
+\image html example.png "Figure 2  A simple register-adder system"
+
+  In Figure2, the PC register and the 2-input adder forms a loop. The PC register is the only component that is clocked in the system and its enable bit is always asserted. PC latches its input value on rising edge and sends the value to the adder on falling edge. This value is added to 1 and the result is sent back to PC.
+
+\par Adder Implementation
+  -# \e adder.h
+  \code 
+#include "kernel/component.h"
+
+class Adder : public manifold::kernel::Component //Adder inherits from Component
+{
+  public:
+  enum {Input0, Input1};
+  enum {OutData};  
+  Adder(uint64_t in1, uint64_t s);
+  virtual void LinkArrival(int src, uint64_t data); // link arrival handler
+  
+  private:
+  uint64_t sum;
+  uint64_t knownInputs[2];
+};
+  \endcode
+  -# \e adder.cc
+  \code
+#include <iostream>
+#include <iomanip>
+#include "adder.h"
+#include "kernel/manifold.h"
+
+Adder::Adder(uint64_t in1, uint64_t s)
+  : sum(s)
+{
+  knownInputs[1] = in1;
+}
+
+void Adder::LinkArrival(int src, uint64_t data) 
+{
+  knownInputs[src] = data;  
+  uint64_t sum = 0;
+  for (int i = 0; i < 2; ++i)
+  {
+    sum += knownInputs[i];
+  }
+
+  Send(OutData, sum);
+}
+  \endcode
+\n  
+\par Register Implementation
+  -# \e register.h
+\code
+class Register : public manifold::kernel::Component
+{
+public:
+  // Registers have two inputs (data/write-enable) and one output
+  enum { InData, InWriteEnable };
+  enum { OutData };
+  Register(); 
+  void RisingEdge(); // UpTick handler
+  void FallingEdge(); // DownTick handler
+  void LinkArrival(int src, uint64_t data); //link arrival handler
+
+private:
+  uint64_t knownInputs[2];
+  uint64_t latchedInput; // Current latched input
+  uint64_t value;        // Current output value
+};
+\endcode
+  -# \e register.cc
+\code
+#include <iostream>
+#include "register.h"
+#include "kernel/clock.h"
+#include "kernel/manifold.h"
+
+using namespace std;
+using namespace manifold::kernel;
+
+Register::Register()
+{ 
+  latchedInput = 0;
+  value = 0;
+  knownInputs[InData] = 0;
+  knownInputs[InWriteEnable] = 1; // Always enabled
+  Clock::Register<Register>(this, &Register::RisingEdge, &Register::FallingEdge); //Registered to the default clock
+}
+
+
+void Register::RisingEdge()
+{ 
+   if (knownInputs[InWriteEnable] != 0)
+    {
+      latchedInput = knownInputs[InData];
+    }
+}
+
+void Register::FallingEdge()
+{ // Copy latched input to ouput
+  value = latchedInput;
+  // Sent output here
+  cout << "value of PC is " << value 
+       << " NowTicks " << Manifold::NowTicks()
+       << endl;
+  Send(OutData, value);
+}
+
+void Register::LinkArrival(int src, uint64_t data) 
+{
+  knownInputs[src] = data;
+}
+\endcode
+\n
+\par The main program
+  - \e example.cc
+\code
+#include <iostream>
+#include "register.h"
+#include "adder.h"
+#include "kernel/manifold.h"
+#include "kernel/component.h"
+#include "mpi.h"
+
+using namespace std;
+using namespace manifold::kernel;
+
+#define LC3FREQ 1000.0
+Clock globalClock(LC3FREQ); //Set the default clock frequency to 1000 ticks/sec
+
+int main(int argc, char** argv)
+{ 
+  Manifold::Init(argc, argv);
+  
+/*Create PC and Adder, both on LP #0 */
+  CompId_t PCReg = Component::Create<Register>(0);  // Create PCReg on LP#0
+  CompId_t PCAdder = Component::Create<Adder, uint64_t, uint64_t>(1, 1, 0); // Create PCAdder on LP#1
+
+/*Make the Connections as in Figure 2*/  
+  Manifold::ConnectTime(PCReg, Register::OutData, PCAdder, Adder::Input0, &Adder::LinkArrival, 0.00001); 
+  Manifold::ConnectTime(PCAdder, Adder::OutData, PCReg,  Register::InData, &Register::LinkArrival, 0.00001); 
+
+  Manifold::StopAtTime(0.2); // stop at 0.2s, i.e. 200 ticks
+  Manifold::Run(); // start the simulation
+  cout << "Simulation completed" << endl;
+  Manifold :: Finalize();
+}
+\endcode
+    To run the example, first make and then use
+    \code mpirun -np 2 example \endcode
+    After excuting the example code, the following results are expected:
+    \code
+    value of PC is 0 NowTicks 0
+    value of PC is 1 NowTicks 1
+    value of PC is 2 NowTicks 2
+    .
+    .
+    .
+    value of PC is 198 NowTicks 198
+    value of PC is 199 NowTicks 199
+    Simulation complete
+    \endcode
+\n
+@section faq Frequently Asked Questions
+- Q: How do I use the Manifold kernel to build a sequential simulation
+program that does not use MPI?\n
+A: Specify the configure option <code>--disable-para-sim</code> when running the configure command, as
+follows:
+\verbatim
+./configure --disable-para-sim
+\endverbatim
+*/

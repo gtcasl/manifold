@@ -1,0 +1,5 @@
+Simulators in this directory demonstrate drop-in interchangeability
+of components. Specifically, the 3 processor models: zesto, spx, and
+simpleproc are exchangeable. For example, to use spx instead of zesto,
+simple add a line, processor_type = "spx", to the configure file.
+

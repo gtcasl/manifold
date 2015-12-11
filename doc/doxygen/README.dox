@@ -1,0 +1,751 @@
+/** @mainpage Manifold 0.12 User Guide
+
+
+<!-- ################################################################# -->
+<!-- ################################################################# -->
+@section sec_index Index
+
+- Introduction
+- Overview
+- Current Release
+- Source Code Directory Structure
+- Build Process Overview
+- Install Required Packages
+- Download and Build QSim
+- Download and Build Manifold Libraries
+- Build the Simulator Programs
+- Start the Simulators
+- Common Problems
+- References
+
+
+<!-- ################################################################# -->
+<!-- ################################################################# -->
+\n
+\n
+@section sec_intro Introduction
+
+Manifold is a parallel discrete event simulation framework for simulation of modern multicore computer
+architectures.
+The software package consists of a parallel simulation kernel, a
+number of component models, and a few
+ready-to-use simulator programs that use the component models to build and simulate system models.
+Users can also port third-party components to Manifold and build system models with them.
+This user guide describes how to obtain Manifold
+source code, and how to build and run the simulator programs.
+
+
+<!-- ################################################################# -->
+<!-- ################################################################# -->
+\n
+\n
+@section sec_overview Overview
+
+Manifold is designed for parallel simulation of multicore systems. The general simulation system
+is shown in Figure 1 below.
+
+\image html sys.png "Figure 1 Manifold Simulation System."
+
+At run-time, instruction streams are fed to the multicore system model for simulation. Example sources
+of instructions include PIN [1] trace files and the QSim [2] multicore emulator. Components
+of the system model can be assigned to different host machines for parallel simulation.
+
+The following are the general steps that a simulator program needs to follow to create a system
+model for simulation.
+
+- Instantiating the various component models, such as processor model, cache model and so on.
+- Connecting the components with Manifold links.
+- Setting a simulation stop time.
+- Starting the simulation by calling \c Manifold :: Run().
+
+The simulator programs that are part of the distribution package can serve as examples for how
+to write simulator programs with Manifold.
+The component models that are included in the package can be used in building
+system models. The user can also port third-party components to Manifold and build system models
+using such components.
+
+
+Major features of Manifold include the following:
+
+- Supporting both sequential and parallel simulations.
+- Supporting three simulation paradigms: discrete time event-driven simulation, time-stepped simulation, and mixed event-driven and time-stepped simulation. 
+- Supporting the QSim multicore emulator front-end.
+- The Energy Introspector (EI) power, energy, thermal, and reliability modeling library for integration
+with multicore processor models.
+- Standard interfaces between components allow mix-and-match of components.
+- Open software architecture allows easy porting of third-party components.
+
+
+
+
+<!-- ################################################################# -->
+<!-- ################################################################# -->
+\n
+\n
+@section sec_release Current Release
+
+The current release is Release 0.12. The software is distributed as a source code package
+that contains the following:
+
+- The parallel simulation kernel.
+- Models:
+  - Zesto: a cycle-level x86 processor model.
+  - SPX: a superscalar x86 processor model.
+  - Simple-proc: a 1-IPC proxessor model.
+  - Mcp-cache: a coherence cache model.
+  - Simple-cache: a simple write-through cache model.
+  - Iris: a cycle-level interconnection network model.
+  - CaffDRAM: a DRAM controller model.
+  - DRAMSim2: a port of the open-source DRAMSim2 model developed at University of Maryland.
+  .
+- Simulator programs.
+ 
+\b Zesto
+- A cycle-level x86 processor model. This model can accept intruction streams from three
+different sources: trace files, QSim server, and QSim library.
+- Both in-order and out-of-order models are included.
+
+\b SPX
+- Not as detailed as Zesto, SPX models all the important components of a modern superscalar
+processor. It can accept instruction streams from QSim server or QSim library.
+
+\b Simple-proc
+- A simple 1-IPC (instruction per cycle) processor model. It can accept instruction streams from three
+different sources: trace files, QSim server, and QSim library.
+
+\b Mcp-cache:
+- Supports the MESI protocol.
+
+\b Simple-cache:
+- A simple write-through cache model. Currently it can only be used in a single-core model.
+
+\b Iris:
+- Supports ring and torus.
+- Supports virtual channels.
+- Supports two virtual networks.
+- Supports flow-control between routers, between router and interface, and between interface and terminal.
+- Supports single-flit packets.
+
+\b CaffDRAM:
+- Supports flow control between the memory controller model and the network model.
+
+
+@subsection sec_portability Testing and Portability
+
+- Manifold has been tested on the PARSEC and SPLASH-2 benchmarks.
+- Manifold has been tested under the the following operating systems:
+  - Ubuntu 10.04, 12.04.
+  - Fedora release 17.
+- Manifold has been tested with Openmpi and MPICH2.
+
+
+
+<!-- ################################################################# -->
+<!-- ################################################################# -->
+\n
+\n
+@section sec_directory Source Code Directory Structure
+The Manifold source code is organized as follows:
+\n
+\n
+\verbatim
+  ROOT
+  |... code
+       |... doc
+       |... kernel
+       |... models
+       |    |... cache
+       |    |    |... mcp-cache
+       |    |    |... simple-cache
+       |    |... memory
+       |    |    |... CaffDRAM
+       |    |... network
+       |    |    |... iris
+       |    |... processor
+       |         |... simple-proc
+       |         |... zesto
+       |... simulator
+            |... smp
+	    |    |... common
+	    |    |... config
+            |    |... QsimClient
+            |    |... QsimLib
+            |    |... QsimProxy
+            |    |... TraceProc
+            |... smp2
+	         |... common
+		 |... config
+                 |... QsimClient
+                 |... QsimLib
+                 |... Trace
+\endverbatim
+
+where \em ROOT represents the root of the source tree.
+
+Under each of \c kernel, \c mcp-cache, \c iris, and \c zesto, there is a subdirectory
+\c doc/doxygen that contains a user guide in Doxygen format for the respective component.
+
+\n
+@subsection sec_src_simulator The simulator directory
+
+There are two sets of simulator programs, under \c smp and \c smp2, respectively.
+Programs under \c smp use a fixed set of components, while programs under \c smp2 allows one
+component to be replaced by another by simply changing a configure file. For example, by changing
+one line of code, the user can replace Zesto with SPX.
+
+Under each of \c smp and \c smp2, there are a total of six simulator programs, two each under \c QsimClient,
+\c QsimLib, and \c TraceProc. The difference is the source of instruction streams. Programs under
+\c QsimClient use QSim server to get instructions. Those under \c QsimLib are built with the QSim
+libraries. And those under \c TraceProc use PIN traces.
+
+The common code of the simulator programs is located in \c common. The directory \c config contains
+configuration files for the simulator programs.
+
+
+<!-- ################################################################# -->
+<!-- ################################################################# -->
+\n
+\n
+@section sec_build_overview Build Process Overview
+
+To build and run the simulator programs that are part of the software package, you will need to perform the following steps:
+
+- [Optional] Install required packages.
+- [Optional] Download and build QSim.
+- Build Manifold libraries.
+- Build the simulator program(s).
+- Run the simulators.
+
+The simulators can respectively take instructions from three different sources: trace files, QSim library, and QSim
+server. Depending on which source you use, some of the steps above may be optional.
+
+The following explains each step in detail.
+
+
+<!-- ################################################################# -->
+<!-- ################################################################# -->
+\n
+\n
+@section sec_install_dep Install Required Packages
+
+Before you proceed, you need to install the following required packages.
+
+- mpi: We have tested with openmpi and mpich2, so these two packages are recommended.
+- libconfig++: The simulators require this package. You should install the development version, such as libconfig++8-dev.
+
+
+
+<!-- ################################################################# -->
+<!-- ################################################################# -->
+\n
+\n
+@section sec_build_qsim Download and Build QSim
+
+If you choose to use QSim to get instructions, you need to build and install QSim first.
+
+@subsection qsim_download Download
+
+We recommend using QSim version 0.1.5, which is available at the Manifold web site:
+
+- http://manifold.gatech.edu/download
+
+
+@subsection qsim_installation Build and Installation
+
+Instructions for building and installing QSim can be found in the \c INSTALL file in the root directory of QSim source code.
+
+In addition to the QSim libaries, you also need to do the following:
+- build the QSim server.
+- build and install the QSim client library.
+
+All the instructions are in the \c INSTALL file.
+
+After you are finished, you installation directory should look like the following, assuming QSIM_INSTALL is the
+root of the installation directory.
+
+\code
+$ ls <QSIM_INSTALL>/lib
+libqemu-qsim.so  libqsim-client.so  libqsim.so
+
+$ ls <QSIM_INSTALL>/include
+mgzd.h  qsim-client.h  qsim.h  qsim-load.h  qsim-net.h  qsim-regs.h  qsim-vm.h
+\endcode
+
+
+
+
+
+
+
+\n
+
+
+<!-- ################################################################# -->
+<!-- ################################################################# -->
+\n
+\n
+@section sec_build_manifold Download and Build Manifold Libraries
+
+There are two ways to download Manifold source code: from the Manifold website or through SVN checkout. Depending on
+which way is used to obtain the source code, the build process is slightly different.
+
+@subsection manifold_download1 Download Manifold source package
+
+Manifold source package is available at the Manifold website:
+
+- http://manifold.gatech.edu/download
+
+After download, follow the following instructions to build the manifold libraries:
+
+-# Untar the source package.
+\verbatim
+$ tar xvfz manifold-0.11.1.tar.gz
+\endverbatim
+\n
+-# Go to the \c code subdirectory.
+\verbatim
+$ cd manifold-0.11.1/code
+\endverbatim
+\n
+-# Run \c configure and \c make.
+\verbatim
+$ ./configure [--prefix=INSTALL_PATH]
+$ make
+\endverbatim
+The default installation directory is \c /usr/local/lib. If you want to install in a different location, the path of that location should be passed to \c configure. In addition, if QSim is installed in a location other than the
+default, you need to tell \c configure that location. Options that you can specify for \c configure are described below.
+\n
+\n
+-# Optionally, install the libraries.
+\verbatim
+$ make install
+\endverbatim
+
+\n
+@subsection manifold_download2 Download Manifold source code through SVN checkout
+
+Manifold source code is available through SVN checkout at the following address:
+
+- https://svn.ece.gatech.edu/repos/Manifold/tags/0.11.1
+
+To build the un-packaged source code, you need to have the autotools package installed on your machine.
+
+-# From the \c code subdirectory, run \c autoreconf.
+\verbatim
+$ cd code
+$ ./autoreconf -si
+\endverbatim
+This would create the \c configure script.
+\n
+\n
+-# Run \c configure and \c make.
+\verbatim
+$ ./configure [--prefix=INSTALL_PATH]
+$ make
+\endverbatim
+\n
+-# Optionally, install the libraries.
+\verbatim
+$ make install
+\endverbatim
+
+
+
+\n
+@subsection config_options Configure options
+
+This section describes all of the options you can use when running the \c configure script.
+
+- \c --prefix=PREFIX \n
+By default, the header files and libraries will be installed in \c /usr/local/include and
+\c /usr/local/lib, respectively. If you want to install the files somewhere else, you should
+use this option, and the files will be installed in \c PREFIX/include and \c PREFIX/lib,
+respectively.
+
+- \c --disable-para-sim \n
+By default, the Manifold libraries are built for parallel simulation with MPI. If you do not want
+to use MPI and therefore only run the simulators in sequential mode, you need to specify this option
+to disable parallel simulation.
+
+- \c --without-qsim \n
+By default, when you build Manifold, you would have already built and installed QSim. If you do not
+want to use QSim, use this option when you run \c configure. When you use this option, the simulator
+can only use trace files.
+
+- \c --enable-kernel-large-data \n
+By default, the maximum size of data that are sent between components is 1024 bytes. If this is
+not big enough, or the maximum size is not known in advance, then this option should be used.
+
+- \c --disable-stats \n
+By default, the Manifold kernel and computer architecture models all collect statistics at run time.
+Use this option to disable run-time collection of statistics.
+
+- \c KERINC=KERNEL_LOCATION \n
+This option specifies where the kernel header files are installed. This is useful when the kernel
+and the models are built separately.
+
+- \c QSIMINC=QSIM_LOCATION \n
+This option specifies the location where QSim is installed. By default, QSim is installed under
+\c /usr/local. This option is useful when QSim is installed in a different location.
+
+- \c --enable-forecast-null \n
+Use this option if you want to use the Forecast Null Message algorithm (FNM).
+
+
+<!-- ################################################################# -->
+<!-- ################################################################# -->
+\n
+\n
+@section sec_build_simulator Build the Simulator Programs
+
+The simulator programs are located in \c ROOT/code/simulator/smp and \c ROOT/code/simulator/smp2.
+Programs under \c smp use a fixed set of components: Zesto, MCP-cache, Iris, and CaffDRAM. Those under
+\c smp2 are more flexible. They allow a component to be replaced by another by simply modifying the
+configure file. For example, you can replace Zesto with SimpleProc, or CaffDRAM with DRAMSim2.
+
+In the following we only discuss programs under \c smp.
+
+There are four subdirectories of simulators, based on how they get instructions:
+- Programs under \c QsimClient use QSim server to get instructions. To build these simulators, you must first build
+and install QSim.
+- Programs under \c QsimLib use QSim libraries. To build these simulators, you must first build and install QSim.
+- Programs under \c QsimProxy use proxy processes that work with QSim server to improve performance.
+- Programs under \c TraceProc use trace files created with a program based on Intel's PIN API.
+
+In addition there are two other subdirectories:
+- Subdirectory \c common contains code that is shared by all simulators.
+- Subdirectory \c config contains configuration files that are shared by all simulators.
+
+To build the simulators, follow the following steps. Here we use the simulators under \c QsimClient as an example.
+
+-# Go to the simulator source directory.
+\verbatim
+$ cd ROOT/code/simulator/smp/QsimClient
+\endverbatim
+\n
+-# Run \c make. It is likely that you need to modify the Makefile so the header files and libraries can be found.
+\verbatim
+$ make
+\endverbatim
+
+
+
+
+<!-- ################################################################# -->
+<!-- ################################################################# -->
+\n
+\n
+@section sec_run_simulator Start the Simulators
+
+In each of the subdirectories there is a program called
+\c <b>smp_llp</b>. This program simulates the following system model, where each core node has a processor core, a
+private L1 cache, and a shared L2 slice.
+
+\image html manifold_example_sys1.png "Figure 2 System Model Simulated by smp_llp."
+
+In addition, there is a program called \c <b>smp_l1l2</b>. It simulates a slightly different model in which L2's are in
+separate nodes, like memory controllers.
+
+Configuration parameters for the components, except Zesto processor, are defined in a libconfig configuration file in
+the subdirectory \c config.
+
+In the following we describe how to start the simulators in each of the subdirectories.
+
+\n
+@subsection sec_start_simulator1 Start the Simulators in QSimClient
+
+These simulators require QSim server be started first.
+
+To start the QSim server, run the following commands:
+
+\verbatim
+$ cd QSIM_ROOT/remote/server
+$ make
+$ ./qsim-server <port> <state_file> <benchmark>  
+\endverbatim
+
+where 
+- \c <port> is the TCP port number the server uses. Use any number you want.
+- \c <state_file> is the state file. QSim is an emulator of a multicore shared-memory machine. The
+state file is the snapshot of the emulated machine after the OS has booted.
+- \c <benchmark> is the tar file containing the application program and its data. See QSim instructions
+on how to build benchmark tar files.
+
+
+\n
+After the QSim server has started, the simulator can be started.
+
+If QSim is installed in \c /usr/local, do the following,
+\verbatim
+$ cd SIMULATOR_ROOT
+$ mpirun -np <NP> <prog> <conf_file> <server> <port>
+\endverbatim
+
+If Qsim is not installed in \c /usr/local, do the following, assuming QSim installation path is QSIM_INSTALL.
+\verbatim
+$ cd SIMULATOR_ROOT
+$ QSIM_PREFIX=<QSIM_INSTALL> LD_LIBRARY_PATH=<QSIM_INSTALL>/lib  mpirun -np <NP> <prog> <conf_file> <server> <port>
+\endverbatim
+
+where
+- \c <NP> is the number of logical processes (LPs), or MPI ranks. For parallel simulation, currently the
+simulators support 1, 2, or N+1 LPs, where N is the number of simulated cores.
+- \c <prog> is the simulator, including \c smp_llp, and \c smp_l1l2.
+- \c <conf_file> is the configuration file for the system being simulated. The system configuration is
+defined in libconfig format.
+- \c <server> is the name or IP address of the QSim server.
+- \c <port> is the TCP port number used by the QSim server.
+
+For example:
+
+\verbatim
+$ mpirun -np 2 smp_llp ../config/conf2x2_torus_llp.cfg localhost 12345
+\endverbatim
+
+The output of the simulation is stored in files named \c DBG_LOG\<i>, where \c \<i> is 0 to n-1, n being
+the number of LPs. The output files contain statistics collected by the components assigned to the
+corresponding LP.
+
+\n
+\n
+@subsection sec_start_simulator_proxy Start the Simulators in QsimProxy
+
+Simulators in \c QsimProxy use proxy processes that is placed between the QSim server and the back-end
+timing simulation to improve performance. The proxy processes act as client to the QSim server and
+obtains instructions from the QSim server over TCP/IP. The proxies and the back-end simulation form
+a producer-consumer relationship using shared memory segments. The proxies put instructions in the
+shared memory segments to be removed by the back-end simulation. The proxies keeps monitoring the contents of
+the shared memory segments. Once the contents fall below a threshold, they communicate with the server
+to obtain more instructions.
+
+The processes should be started in the following order.
+
+-# Start the QSim server.
+-# Start the proxy processes.
+-# Start the simulator.
+
+To start the QSim server, run the following commands:
+
+\verbatim
+$ cd QSIM_ROOT/remote/server
+$ make
+$ ./qsim-server <port> <state_file> <benchmark>  
+\endverbatim
+
+where 
+- \c <port> is the TCP port number the server uses. Use any number you want.
+- \c <state_file> is the state file. QSim is an emulator of a multicore shared-memory machine. The
+state file is the snapshot of the emulated machine after the OS has booted.
+- \c <benchmark> is the tar file containing the application program and its data. See QSim instructions
+on how to build benchmark tar files.
+
+
+\n
+After the QSim server has started, the proxies are started. Each proxy is a multithreaded process that
+can serve multiple core models in the back-end. Obviously, the proxy and the core models they serve
+must run on the same physical machine because they communication with shared memory segments.
+
+\verbatim
+$ cd ROOT/models/processor/zesto/proxy_mt
+$ make
+$ ./proxy <qsim_server> <port> <shared_mem_filename> <shared_mem_size> <core-proxy_map>
+\endverbatim
+
+where 
+- \c <qsim_server> is the host name or IP address of the QSim server.
+- \c <port> is the TCP port number the server uses.
+- \c <shared_mem_filename> is a file accessible by all your processes.
+- \c <shared_mem_size> is size of each shared memory segment. There's one segment for each core model.
+The size must be a power of 2.
+- \c <core-proxy_map> is a mapping file that maps each core id to the host name of its proxy.
+
+An example core-proxy map file is as follows:
+
+\verbatim
+0  crankshaft
+1  crankshaft
+2  crankshaft
+...
+15 crankshaft
+\endverbatim
+
+This file is for a simulation model that has 16 cores. All the cores are served by a single
+proxy running on the machine \c crankshaft.
+
+
+\n
+After the QSim server and the proxies have started, the simulator can be started.
+
+\verbatim
+$ cd SIMULATOR_ROOT
+$ mpirun -np <NP> <prog> <conf_file> <shared_mem_filename> <shared_mem_size>
+\endverbatim
+
+where
+- \c <NP> is the number of logical processes (LPs), or MPI ranks. For parallel simulation, currently the
+simulators support 1, 2, or N+1 LPs, where N is the number of simulated cores.
+- \c <prog> is the simulator, including \c smp_llp, and \c smp_l1l2.
+- \c <conf_file> is the configuration file for the system being simulated. The system configuration is
+defined in libconfig format.
+- \c <shared_mem_filename> is a file accessible by all your processes.
+- \c <shared_mem_size> is size of each shared memory segment. There's one segment for each core model.
+The size must be a power of 2.
+
+For example:
+
+First start the proxy:
+
+\verbatim
+$ ./proxy localhost 12345 ~/shm_file 262144 ./core_proxy_map
+\endverbatim
+
+Then start simulator:
+
+\verbatim
+$ mpirun -np 9 smp_llp ../config/conf4x5_torus_llp.cfg ~/shm_file 262144
+\endverbatim
+
+Unlike the other simulator programs, with proxies, we put two core models in a single MPI process (LP).
+Therefore, for a 16-core model, we use 9 processes (8 for the cores, 1 for network and memory controllers).
+
+The output of the simulation is stored in files named \c DBG_LOG\<i>, where \c \<i> is 0 to n-1, n being
+the number of LPs. The output files contain statistics collected by the components assigned to the
+corresponding LP.
+
+\n
+\n
+@subsection sec_start_simulator2 Start the Simulators in QSimLib
+
+Simulators in this subdirectory can only be run with 1 LP, or in sequential mode.
+
+If QSim is installed in \c /usr/local, do the following.
+\verbatim
+$ mpirun -np 1 <prog> <conf_file> <state_file> <benchmark>
+\endverbatim
+
+If Qsim is not installed in \c /usr/local, do the following, assuming QSim installation path is QSIM_INSTALL.
+\verbatim
+$ QSIM_PREFIX=<QSIM_INSTALL> LD_LIBRARY_PATH=<QSIM_INSTALL>/lib  mpirun -np 1 <prog> <conf_file> <state_file> <benchmark>
+\endverbatim
+
+where
+- \c <prog> is the simulator, including \c smp_llp, and \c smp_l1l2.
+- \c <conf_file> is the configuration file for the system being simulated. The system configuration is
+defined in libconfig format.
+- \c <state_file> is QSim's state file.
+- \c <benchmark> is the application tar file.
+
+For example:
+
+\verbatim
+$ mpirun -np 1 smp_llp ../config/conf4x1_ring_llp.cfg myState_16 myBench.tar
+\endverbatim
+
+The output of the simulation is stored in a file named \c DBG_LOG0, which contains
+statistics collected by all of the components.
+
+\n
+\n
+@subsection sec_start_simulator3 Start the Simulators in TraceProc
+
+These simulators use traces obtained with a PIN-based program.
+
+\verbatim
+$ mpirun -np <NP> <prog> <conf_file> <trace_file_basename>
+\endverbatim
+
+where
+- \c <NP> is the number of logical processes (LPs), or MPI ranks. For parallel simulation, currently the
+simulators support 1, 2, or N+1 LPs, where N is the number of simulated cores.
+- \c <prog> is the simulator, including \c smp_llp, and \c smp_l1l2.
+- \c <conf_file> is the configuration file for the system being simulated. The system configuration is
+defined in libconfig format.
+- \c <trace_file_basename> is the base name of the trace files. All trace files must have the same base name
+and be named <base_name>0, <base_name>1, <base_name>2, etc. For example, if the trace files are \c myFile0,
+\c myFile1, then the base name is \c myFile.
+
+For example:
+
+\verbatim
+$ mpirun -np 2 smp_llp ../config/conf2x2_torus_llp.cfg myTrace
+\endverbatim
+
+The output of the simulation is stored in files named \c DBG_LOG\<i>, where \c \<i> is 0 to n-1, n being
+the number of LPs. The output files contain statistics collected by the components assigned to the
+corresponding LP.
+
+
+\n
+\n
+@subsection sec_select_sync_algo Selecting Synchronization Algorithm
+
+Manifold supports the following synchronization algorithms:
+
+- \c SA_CMB: basic Null-messsage (CMB) algorithm.
+- \c SA_CMB_OPT_TICK: optimized CMB for clock-cycle-based simulations. This is the default.
+- \c SA_CMB_TICK_FORECAST: optimization of \c SA_CMB_OPT_TICK using Forecast Null-message (FNM).
+- \c SA_LBTS: lower bound time-stamp.
+- \c SA_QUANTUM: time-quantum-based synchronization.
+
+The default algorithm is \c SA_CMB_OPT_TICK. The algorithm can be set in the simulator program when
+calling the \c Manifold::Init() function.
+
+For example, to set the algorithm to \c SA_CMB, do the following:
+
+\verbatim
+Manifold::Init(argc, argv, Manifold::TICKED, SyncAlg::SA_CMB);
+\endverbatim
+
+\n
+The Quantum algorithm is slightly different. After calling \c Manifold::Init(), you need to call
+another function to set the quantum value. For example:
+
+\verbatim
+Manifold::Init(argc, argv, Manifold::TICKED, SyncAlg::SA_QUANTUM);
+Quantum_Scheduler* sch = dynamic_cast<Quantum_Scheduler*>(Manifold::get_scheduler());  //get the scheduler
+assert(sch);
+sch->init_quantum(10); //set the quantum to 10 cycles
+\endverbatim
+
+
+
+
+
+
+<!-- ################################################################# -->
+<!-- ################################################################# -->
+\n
+\n
+@section sec_problems Common Problems
+
+The following is a list of commonly encountered problems, and how to solve them.
+
+- mpirun: command not found \n
+\b Solution: If you are using openmpi, install the openmpi-bin package.
+
+- simulation_stop has incorrect type. \n
+\b Solution: Open the configuration file, append an 'L' to the number you specify for
+simulation_stop. For example, if it was "simulation_stop = 1000", change it to
+"simulation_stop = 1000L".
+
+- cp: cannot stat `./libqemu.so': No such file or directory \n
+system("cp ./libqemu.so /tmp/qsim_WKLK7m") returned 256. \n
+\b Solution: Specify LD_LIBRARY_PATH as shown above.
+
+- cp: cannot stat `/usr/local/lib/libqemu-qsim.so': No such file or directory \n
+system("cp /usr/local/lib/libqemu-qsim.so /tmp/qsim_eIwV0x") returned 256. \n
+\b Solution: Specify QSIM_PREFIX as shown above.
+
+
+<!-- ################################################################# -->
+<!-- ################################################################# -->
+\n
+\n
+@section sec_ref References
+
+- [1] www.pintool.org, Pin - A Dynamic Binary Instrumentation Tool, www.pintool.org.
+- [2] www.cdkersey.com, QSim - QEMU for Simulators, www.cdkersey.com/qsim-web.
+
+
+*/
+

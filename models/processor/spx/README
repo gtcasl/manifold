@@ -1,0 +1,84 @@
+***** manifold::spx *****
+
+File Tree:
+	HEADERS:
+		component.h
+		core.h
+		instruction.h
+		pipeline.h
+		pipeline/outorder.h
+		pipeline/inorder.h
+	SOURCES:
+		component.cc
+		core.cc
+		instruction.cc
+		pipeline.cc
+		pipeline/outorder.cc
+		pipelnie/inorder.cc
+	CONFIG:
+		config/outorder.config
+		config/inorder.config
+
+Core design description:
+	spx_core_t:
+		"spx_core_t", a subclass of "manifold::kernel::Component", 
+		includes a "pipeline_t" that is a base class of two different 
+		pipeline models; "outorder_t" and "inorder_t". The constructor 
+		reads and parses a configuration file using libconfig library, 
+		and registers Qsim library callback functions defined in 
+		pipeline_t. It does simple fastfwd in unit of Qsim instructions.
+
+	pipeline_t:
+		"pipeline_t" is a base class of two pipeline models; "outorder_t"
+		and "inorder_t". It defines Qsim library callback functions;
+		"Qsim_inst_cb", "Qsim_mem_cb", "Qsim_reg_cb". These callback functions
+		must appear in a correct sequence, otherwise "pipeline_t" breaks an
+		instruction returned from Qsim library into multiple instructions,
+		which is analogous to converting x86 macro-ops to micro-ops. The
+		callback sequence follows the order of "enum SPX_QSIM_CB_TYPES."
+		"Qsim_post_cb" is used to further break an instruction even after
+		Qsim library callbacks were called in a right sequence. For instance,
+		an instruction with memory operand and destination register is splitted
+		into two separate instructions for certain opcodes. When splitting an
+		instruction, pointers to head and next instructions is set to maintain
+		Mop-level instruction information after instructions are splitted.
+
+	inst_t:
+		"inst_t" is an instruction definition used in "spx_core_t."
+
+	component:
+		There are 8 component types used in "spx_core_t." "instQ_t" is a frontend
+		buffer where fetched instructions are first queued. "ROB_t" and "RS_t"
+		represent reorder buffer and reservation station used in "outorder_t"
+		model. "RF_t" is technically a register alias table to keep track of
+		instruction dependency. "FU_t" is a unit ALU model, and "EX_t" is a
+		set of ALUs for the same type. For instance, if an integer ALU has two
+		possible execution ports, then EX_t[SPX_FU_INT] is comprised of two
+		FU_t's indexed with port number. STQ_t and LDQ_t are store and load queues,
+		respectively. They only maintain entry occupancy but do not really have
+		entries for the instructions.
+
+	pipeline/outorder:
+		This is an out-order core model that includes all component types defined
+		component.h
+
+	pipeline/inorder:
+		This is an in-order core model and includes only "instQ_t","RF_t", and 
+		"EX_t." "RS_t" is defined only as 1-entry queue to mimic instruction queue 
+		of in-order processors.
+
+Examples:
+	Creating a spx_core:
+		node_cids[i].proc_cid = Component::Create<spx::spx_core_t>(node_lp, 
+		node_id, qsim_osd, config_file_path, core_id);
+
+	Connecting spx_core and cache:
+		// proc to cache
+		Manifold::Connect(node_cids[i].proc_cid, spx_core_t::OUT_TO_DATA_CACHE,
+		node_cids[i].cache_cid, MESI_L1_cache::PORT_PROC,
+		&MESI_L1_cache::handle_processor_request<spx::cache_request_t>, 1);
+
+		// cache to proc
+		Manifold :: Connect(node_cids[i].cache_cid, MESI_L1_cache::PORT_PROC,
+		node_cids[i].proc_cid, spx_core_t::IN_FROM_DATA_CACHE,
+		&spx_core_t::handle_cache_response, 1);

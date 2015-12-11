@@ -1,0 +1,10 @@
+***** manifold::interrupt_handler *****
+
+File Tree:
+	HEADERS:
+		interrupt_handler.h
+	SOURCES:
+		interrupt_handler.cc
+
+Description:
+    This an interrupt handler for Qsim, which has to be periodically invoked (e.g., 1ms) during timing simulations.

@@ -1,0 +1,558 @@
+/** @mainpage Iris 1.0 User Guide
+
+@section sec_intro Introduction
+Iris is a cycle level interconnection network model developed for multi-core and multi-node networks. It is developed
+as part of the Manifold simulator framework. This document provides details of Iris' architecture and breakdown of components that include network interfaces, routers, and subcomponents of router. Details of the router micro-architecture, network topologies design, etc. are given in subsequent sections. Iris is open-source and released under the New BSD license. 
+
+\n
+@section sec_directory Directory Structure
+The Iris source code is organized into the following main sub-directories:
+\n
+\n
+\code
+iris
+|... components
+|... data_types
+|... doc
+|... examples
+|... genericTopology
+|... interfaces
+\endcode
+  \n
+- Components: This directory contains implementations of all the components and their functionalities in an Iris network. Components include routers, subcomponents of router, arbiters, etc.
+
+- Data_types: The classes in this directory define the data types for modeling the units of transmission in an Iris network. The main components here are: network flit and link data. A network packet is broken into flits, and each flit is wrapped inside a link data object for transmission.
+
+- Doc: This directory contains Iris documentation, including this use guide.
+
+- Examples: The files in this directory are example programs that can help a user to understand how to use Iris.
+
+- GenericTopology: This directory contains the implementation of the supported topologies in Iris. Currently they include ring and torus.
+
+- Interfaces: This directory contains the definition of network interfaces. It also includes the genericHeader.h file which contains common definitions used throughout the code base.
+
+
+\n
+@section sec_overview Overview
+
+Iris is a interconnection network model developed as part of the Manifold framework for simulation of multicore systems.
+An example Manifold simulation system is shown below.
+
+\n
+\image html Manifold_example_system.png "Figure 1 - Example Manifold system."
+\n
+
+The Iris network model consists of routers and network interfaces. The routers are interconnected according to the selected
+topology, and each router is connected to one network interface. An outside components such as a cache model connects to the
+network interface to send and receive packets. The overall structure of Iris is shown below.
+
+\n
+\image html Iris_overview.png "Figure 2 - Structure of Iris network."
+\n
+
+
+Features of the Iris network model include:
+- Supports virtual channels.
+- Supports for k-ary 2D torus, and ring topologies - Support for other topologies like mesh, fat tree and flattened butterfly are planned for future work.
+- Supports request-reply network.
+- Supports single-flit packets.
+- Supports generic network packet data types. Iris does not define its own network packet. Instead, it supports any user-defined data type that complies with its requirements.
+- Supports sequential and parallel simulation modes. In parallel simulation, the network interfaces and routers can be assigned to a single logic process or different logic processes.
+- Supports multiple operating systems - Tested on Red Hat Enterprise Linux 5.5 and Ubuntu 10.10. Plan to support more OS in the future.
+
+Below is a brief description of the components of Iris.
+
+-# <b>Network interface</b>: This component is defined as a templated class \c GenNetworkInterface<T>. Making the class a
+template allows any terminal types to be connected to the network as long as they only send one packet type to the
+network. This also allows the network to be decoupled from its terminals.
+-# <b>Router</b>: This component is defined in the \c SimpleRouter class. This version of Iris has a simple 5 stage pipeline router. The 5 stages are: Buffer Write (BW), Route Computation (RC), Virtual Channel Allocation (VCA), Switch Allocation (SA) and Switch Traversal (ST). 
+  \n
+  A detailed diagram of the router architecture and associated data structures is given below:
+  \n
+  \image html micro.png "Figure 2 - The Iris Router Architecture and associated data structures"
+  \n
+-# <b>Route Computation Unit</b>: This unit is a sub-component of the router architecture. It is defined as a separate class in \c genericRC.h to decouple the various routing algorithms from the router class. The class provides routing functions for various topologies supported in Iris.
+-# <b>Virtual Channel Allocation Unit</b>: This sub-component is defined in \c genericVcAllocator.h and implements the class for virtual channel allocation. Each packet's head flit has to be assigned an output virtual channel after it is buffered in a router. Only the head flits go through this phase.
+-# <b>Switch Arbitration Unit</b>: Another sub-component of the router, this class is defined in the \c genericSwitchArbiter.h file. This class deals with the switch arbitration for each output port i.e, from all the contending packets, a winner is selected for each output port to send the flits out. Once the winner is picked, the switch is configured for the corresponding pairs of input and output ports. Various schemes have been implemented for arbitration including, round robin, round robin with priority and FCFS. All the flits of a packet go through this phase.
+
+\n
+@section sec_using Using Iris
+
+@subsection download Download
+Iris is available as part of the Manifold distribution at the following link: \n
+<ul><li> http://manifold.gatech.edu</ul>
+
+\n
+@subsection installation Installation
+
+Iris can be installed when you install the whole Manifold distribution, or you can select to install only the Manifold kernel and then Iris. Refer to the Manifold kernel user guide for instructions on how to install the kernel.
+
+@subsection externallibraries External Library Dependencies
+Iris depends on the following external libraries. Ensure that these libraries are installed before compiling Iris.
+-# GSL (GNU Scientific Library) version 1.14 used by the packet generators: This library can be downloaded from the link <ul><li> http://www.gnu.org/software/gsl/ </ul>
+-# open MPI version 1.4.3 for running the parallel version of Iris: This can be downloaded from <ul><li> http://www.open-mpi.org/software/ompi/v1.4/ </ul>
+
+\n
+@subsection tocompile To compile
+  To compile the Iris source code and generate the Iris library comprising all the components and topologies, follow the steps given below:
+  \n
+- Untar the source code package.
+- tar -zvxf <tar_name>
+- Go to the top of the source code directory.
+- ./configure  [--prefix=<i>your_install_dir</i>]
+- make
+- make install
+
+\n
+@subsection compileOpt Compile Options
+
+The following options are available:
+
+- \c IRIS_STATS_T2T_DELAY: When this option is set, Iris network interface collects runtime stats on
+terminal-to-terminal delays. Since the network interface is a template class, this option must be
+specified when building the client code.
+
+
+
+
+
+
+
+\n
+@subsection interface Interface
+This section describes Iris' programming interface that a user needs to know in order to write simulation programs using
+Iris.
+
+- Class \c Simple_terminal_to_net_mapping. \n
+This is a subclass of the abstract class \c Terminal_to_net_mapping. The idea is
+to decouple terminal's addresses from their network addresses used by Iris. An object of \c Terminal_to_net_mapping is
+created that keeps the mapping from a terminal address to the corresponding network address. The abstract class defines an
+abstract function \c terminal_to_net(). With \c Simple_terminal_to_net_mapping, a terminal address A is mapped to itself.
+This class can be used when the terminal address is the same as the corresponding network address.
+\c Simple_termnal_to_net_mapping is the only concrete subclass of \c Terminal_to_net_mapping that Iris provides. Users can
+write their own mapping classes if necessary.
+\n
+\n
+- Class \c SimulatedLen<T>. \n
+This templated class is created for supporting simulated packet length. The packets that are transported through Iris contain
+information used by the simulator programs. Their size should not be used when Iris converts packets to flits. Instead, Iris
+should use a simulated length for a packet that is probably different from the actual packet size. With this class, a packet
+with 40 bytes, for example, can have a simulated length of 16, or 80. This makes the network more realistic. In addition,
+determining the simulated length of packets should not be the responsibility of Iris. That's why this class is created.
+Client code should create a object of this class or its subclass and pass that object to Iris.
+\n
+\n
+- Class \c VnetAssign<T>. \n
+This class is created to support request-reply network. It maps the packets to one of two virtual networks. This mapping
+should not be the responsibility of Iris, so client code needs to create an object of this class or its subclass and pass
+the object to Iris.
+\n
+\n
+- Class \c ring_init_params. \n
+This class defines the initialization parameters for a ring network.
+\code
+struct ring_init_params {
+    uint no_nodes;
+    uint no_vcs;
+    uint credits;
+    ROUTING_SCHEME rc_method;
+    uint link_width;
+    unsigned ni_up_credits;
+    int ni_upstream_buffer_size;
+};
+\endcode
+  - \c no_nodes: This specifies the number of nodes in the ring network.
+  - \c no_vcs: This specifies the number of virtual channels each port has.
+  - \c credits: This specifies the sending credits for each virtual channel.
+  - \c rc_method: This parameter is currently not used.
+  - \c link_width: This specifies the width of the link in terms of bits. It must be a multiple of 8.
+  - \c ni_up_credits: This specifies the initial credits for the network interface to send packets to terminals.
+  - \c ni_upstream_buffer_size: This specifies the size of the buffer used by the network interface for output to terminal.
+  .
+\n
+- Class torus_init_params. \n
+\code
+struct torus_init_params {
+    uint x_dim;
+    uint y_dim;
+    uint no_vcs;
+    uint credits;
+    uint link_width;
+    unsigned ni_up_credits;
+    int ni_upstream_buffer_size;
+};
+\endcode
+  - \c x_dim: The X dimension of the 2-D torus.
+  - \c y_dim: The Y dimension of the 2-D torus.
+  - The other parameters are the same as \c ring_init_params.
+  .
+\n
+- Class \c topoCreator. \n
+This templated class is what a user would use to create a network. Two static functions are provided:
+\code
+static Ring<T>* create_ring(manifold::kernel::Clock& clk, ring_init_params* params, const Terminal_to_net_mapping*, SimulatedLen<T>*, VnetAssign<T>*, int ni_credit_type, uint lp_i, uint lp_rt);
+static Torus<T>* create_torus(manifold::kernel::Clock& clk, torus_init_params* params, const Terminal_to_net_mapping*, SimulatedLen<T>*, VnetAssign<T>*, int ni_credit_type, uint lp_i, uint lp_rt);
+\endcode
+  - \c clk: This is the clock object with which the components of the network would register.
+  - \c ni_credit_type: This is message type for the network interface's credits.
+  - \c lp_i: The ID of the logic process to which the network interfaces are assigned.
+  - \c lp_rt: The ID of the logic process to which the routers are assigned.
+  .
+The template parameter \c T is the type of the data packets that terminals send to and receive from the network. Any
+user-defined type can be used as long as they meet the following requirements:
+  - \c T must have a member function \c get_type() that returns the packet type.
+  - \c T must have a member function \c set_type() that takes an integer parameter.
+  - \c T must have a member function \c get_src() that returns the sending terminal's ID.
+  - \c T must have a member function \c get_src_port() that returns the sending terminal's port.
+  - \c T must have a member function \c get_dst() that returns the receiving terminal's ID.
+  - \c T must have a member function \c get_dst_port() that returns the receiving terminal's port.
+  - \c T must have a member function \c set_dst_port() that sets the packet's destination port to the integer parameter passed to the function.
+  - \c T must not have a member that is a pointer or reference.
+  - \c T must not have virtual functions.
+  .
+\n
+- Displaying statistics. \n
+The classes \c Ring and \c Torus provide a function for displaying statistics, as follows:
+\code
+template <typename T> void Ring<T> :: print_stats(std::ostream& out);
+template <typename T> void Torus<T> :: print_stats(std::ostream& out);
+\endcode
+
+
+
+\n
+@subsection howto To write a simulation program
+
+To use Iris as part of your simulation program follow the following steps.
+
+-# Create a \c Clock object.
+-# Call \c Manifold::Init().
+-# Choose a network topology and call a function from \c genericTopoCreator.h to create a network. For example, to
+create a ring network, you may do the following:
+\code
+Simple_terminal_to_net_mapping* mapping = new Simple_terminal_to_net_mapping();
+MySimLen* simLen = new MySimLen();
+MyVnet* vnet = new MyVnet();
+
+Ring<TerminalData>* myRing = topoCreator<TerminalData>::create_ring(clk, &rp, mapping, simLen, vnet, CREDIT_MSG_TYPE, 0, 0);
+
+\endcode
+    - The first parameter is a reference to the clock object that is used by the network.
+    - The second parameter's type is \c ring_init_params, which specifies parameters for the ring, such as number
+    of nodes, number of virtual channels, etc..
+    - The third parameter is a \c Terminal_to_net_mapping object which maps the terminal address to
+    network interface address. \c Simple_terminal_to_net_mapping is a subclass of \c Terminal_to_net_mapping. This
+    mapping object is used when the terminal in your network has the same ID as the network interface to which it
+    is connected.
+    - The fourth parameter is a \c SimulatedLen<T> object. Here \c MySimLen is a subclass of \c SimulatedLen<T>.
+    - The fifth parameter is a \c VnetAssign<T> object. Here \c MyVnet is a subclass of \c VnetAssign<T>.
+    - The last 2 parameters give the logical process ID of the interfaces and routers, respectively.
+    .
+
+-# Create terminals, such as cache objects.
+-# Connect each terminal to a network interface using the \c Manifold::Connect function.
+-# Specify a simulation stop time by calling \c Manifold::StopAt.
+-# Start the simulation by calling \c Manifold::Run.
+
+
+@subsection example Example
+The following example demonstrates how the Iris network model can be used in building a simulation program using
+the Manifold framework.
+
+The program creates a ring network, and for each network interface creates a \c Mockterminal object, and connect
+the \c Mockterminal objects to their corresponding network interface. Each \c Mockterminal sends out a packet
+(\c TerminalData)
+every clock tick until a given maximum number has been reached. The destination of the packets is randomly
+selected. At the end of the program we print out statistics.
+
+\code
+#include <iostream>
+#include <list>
+#include <stdlib.h>
+#include "iris/genericTopology/genericTopoCreator.h"
+#include "iris/interfaces/genericIrisInterface.h"
+#include "kernel/manifold.h"
+#include "kernel/component.h"
+
+using namespace std;
+
+using namespace manifold::kernel;
+using namespace manifold::iris;
+
+
+// This class defines data sent between terminals.
+const unsigned DATASIZE = 8;
+
+class TerminalData {
+public:
+    enum { REQ, REPLY};
+
+    int type;
+    int src;
+    int dst;
+    unsigned data[DATASIZE];  //do not use containers
+    
+    int get_type() { return type; }
+    void set_type(int t) { type = t; }
+    int get_src() { return src; }
+    int get_dst() { return dst; }
+    int get_src_port() { return 0; }
+    int get_dst_port() { return 0; }
+    void set_dst_port(int dp) {} //do nothing
+};
+
+
+// This class calculates simulated length of packets.
+class MySimLen : public manifold::iris::SimulatedLen<TerminalData> {
+public:
+    int get_simulated_len(TerminalData* pkt)
+    {
+        if(pkt->type == TerminalData::REQ)
+            return 18;
+        else
+            return 4;
+    }
+};
+
+
+//This class assigns packets to virtual networks based on packet type.
+class MyVnet : public manifold::iris::VnetAssign<TerminalData> {
+public:
+    int get_virtual_net(TerminalData* pkt)
+    {
+        if(pkt->type == TerminalData::REQ)
+            return 0;
+        else
+            return 1;
+    }
+};
+
+
+const int NI_CREDIT_TYPE = 123; //msg type for network interface upstream credits.
+
+
+//This class emulates a terminal.
+class Mockterminal : public manifold::kernel::Component {
+public:
+    enum {PORT_NI=0};
+
+    Mockterminal(unsigned id, unsigned n_nodes, unsigned total_pkts) :
+        m_id(id), m_NODES(n_nodes), m_TOTAL_PKTS(total_pkts)
+    {   
+        m_pkt_count = 0;
+    }
+    
+    void tick ()
+    {  
+        if(m_pkt_count < m_TOTAL_PKTS) {
+        //cout << "Terminal " << m_id << " sending\n";
+            TerminalData* td = new TerminalData;
+            td->type = TerminalData::REQ;
+            td->src = m_id;
+
+            while((td->dst = random() % m_NODES) == m_id); //randomly pick a destination, but not self.
+
+            Send(PORT_NI , td);
+            m_pkt_count++;   
+        } 
+    }
+    
+    
+    void handle_incoming_pkt(int, TerminalData* td)
+    {
+        if(td->type == TerminalData::REQ) {
+            m_pkts.push_back (*td);
+            //send a credit back; reuse td
+            td->type = NI_CREDIT_TYPE;
+            Send(PORT_NI , td);
+        }
+        else if(td->type == NI_CREDIT_TYPE) {
+            //do nothing
+            delete td;
+        }
+        else {
+            assert(0);
+        }
+    }    
+
+private:
+    unsigned m_id;
+    unsigned m_pkt_count; //number of pkts that have been sent
+    const unsigned m_NODES; //number of nodes in the network
+    const unsigned m_TOTAL_PKTS; //pkts to send to each of the other nodes
+
+    list<TerminalData> m_pkts; //received pkts
+
+};
+
+
+
+const int MASTER_CLOCK_HZ = 1000;
+Clock MasterClock(MASTER_CLOCK_HZ);
+
+
+int main(int argc, char** argv)
+{
+
+    //check command-line arguments
+    if(argc != 3) {
+        cerr << "Usage: " << argv[0] << " <num_nodes>  <num_packets>" << endl
+             << "   num_nodes: number of nodes in the network." << endl
+             << "   num_packets: max number of packets a node can send." << endl;
+        exit(1);
+    }
+
+    const unsigned NUM_NODES = atoi(argv[1]);
+    if(NUM_NODES < 2 || NUM_NODES > 256) {
+        cerr << "Number of nodes must be between 2 and 256." << endl;
+        exit(1);
+    }
+
+    const unsigned NUM_PKTS = atoi(argv[2]);
+    if(NUM_PKTS < 1) {
+        cerr << "Number of packets cannot be less than 1." << endl;
+        exit(1);
+    }
+
+
+    Manifold :: Init(argc, argv);
+
+    //the paramters for ring network
+    ring_init_params rp;
+    rp.no_nodes = NUM_NODES;
+    rp.no_vcs = 4; //number of virtual channels
+    rp.credits = 20; //number of credits for each virtual channel
+    rp.rc_method = RING_ROUTING;
+    rp.link_width = 128;
+    rp.ni_up_credits = 10;
+    rp.ni_upstream_buffer_size = 5;
+        
+    Clock& clk = MasterClock;
+        
+    //creat the ring network
+    Simple_terminal_to_net_mapping* mapping = new Simple_terminal_to_net_mapping();
+    MySimLen* simLen = new MySimLen();
+    MyVnet* vnet = new MyVnet();
+
+    Ring<TerminalData>* myRing = topoCreator<TerminalData>::create_ring(clk, &rp, mapping, simLen, vnet, NI_CREDIT_TYPE, 0, 0);
+
+        
+    //creat the terminals
+    vector<CompId_t> term_ids(NUM_NODES);        
+    vector<Mockterminal*> terms(NUM_NODES); //pointer to terminal objects
+
+    for (unsigned i=0; i<NUM_NODES; i++) {
+        term_ids[i] = Component :: Create<Mockterminal> (0, i, NUM_NODES, NUM_PKTS);
+        terms[i] = Component :: GetComponent<Mockterminal>(term_ids[i]);
+        if (terms[i])
+            Clock::Register(clk, terms[i], &Mockterminal::tick, (void (Mockterminal::*)()) 0);
+    }
+        
+    //get the network interfaces' component IDs for connection.
+    const vector <manifold::kernel::CompId_t>& inf_ids = myRing->get_interface_id();
+
+    //connect terminal and interface
+    const Ticks_t LATENCY = 1;
+    for (unsigned i=0; i<NUM_NODES; i++) {
+        Manifold::Connect(term_ids[i], Mockterminal::PORT_NI, inf_ids[i], 
+                      GenNetworkInterface<TerminalData>::DATAFROMTERMINAL,
+                      &GenNetworkInterface<TerminalData>::handle_new_packet_event, LATENCY);
+        Manifold::Connect(inf_ids[i], GenNetworkInterface<TerminalData>::DATATOTERMINAL, term_ids[i], 
+                      Mockterminal::PORT_NI, &Mockterminal::handle_incoming_pkt, LATENCY);               
+    }
+        
+    Manifold::StopAt(10000);
+    Manifold::Run();
+        
+    myRing->print_stats(cout);
+
+    Manifold :: Finalize();
+
+}
+\endcode
+
+@subsection output Output
+
+\code 
+$ ./RingExample1 2 20
+
+Interface 0:
+  Packets in from terminal: 20
+  Packets out to terminal:  20
+  Total / single-flit packets in from router: 20 / 0
+  Total / single-flit packets out to router:  20 / 0
+  Max input buffer size:  16
+  Max output buffer size:  1
+Interface 1:
+  Packets in from terminal: 20
+  Packets out to terminal:  20
+  Total / single-flit packets in from router: 20 / 0
+  Total / single-flit packets out to router:  20 / 0
+  Max input buffer size:  16
+  Max output buffer size:  1
+
+ SimpleRouter[0] packets_in: 40
+ SimpleRouter[0] packets_out: 40
+ SimpleRouter[0] flits_in: 120
+ SimpleRouter[0] flits_out: 120
+ SimpleRouter[0] avg_router_latency: 9.675
+ SimpleRouter[0] last_pkt_out_cy: 183
+ SimpleRouter[0] ib_cycles: 120
+ SimpleRouter[0] vca_cycles: 10000
+ SimpleRouter[0] sa_cycles: 10000
+ SimpleRouter[0] st_cycles: 120
+ SimpleRouter[0] per_port_pkts_out: 20 0 0 0 0 0 0 0 0 0 20 0 
+ SimpleRouter[0] per_port_avg_lat: 5 0 0 0 0 0 0 0 0 0 14.35 0 
+ SimpleRouter[0] per_port_last_pkt_out_cy: 183 0 0 0 0 0 0 0 0 0 179 0 
+
+ SimpleRouter[1] packets_in: 40
+ SimpleRouter[1] packets_out: 40
+ SimpleRouter[1] flits_in: 120
+ SimpleRouter[1] flits_out: 120
+ SimpleRouter[1] avg_router_latency: 9.675
+ SimpleRouter[1] last_pkt_out_cy: 183
+ SimpleRouter[1] ib_cycles: 120
+ SimpleRouter[1] vca_cycles: 10000
+ SimpleRouter[1] sa_cycles: 10000
+ SimpleRouter[1] st_cycles: 120
+ SimpleRouter[1] per_port_pkts_out: 20 0 0 0 20 0 0 0 0 0 0 0 
+ SimpleRouter[1] per_port_avg_lat: 5 0 0 0 14.35 0 0 0 0 0 0 0 
+ SimpleRouter[1] per_port_last_pkt_out_cy: 183 0 0 0 179 0 0 0 0 0 0 0 
+\endcode
+
+\n
+\n
+@section limit Limitations
+
+- The current version supports only two virtual networks.
+- The number of virtual channels must be exactly 4.
+
+\n
+\n
+@section faq Frequently Asked Questions
+
+Q: Does Iris enforce point-to-point ordering? In other words, if terminal A sends two packets to terminal B, does Iris ensure
+the packets arrive at B in the same order they were sent at A?
+- Yes. Current implementation of \c SimpleRouter enforces point-to-point ordering.
+
+
+Q: How is a new topology created?
+- To add a new topology, create a templated class in the \c genericTopology directory. In the constructor of the class,
+create all components such as network interfaces and routers, and connect them in the way defined by the topology.
+Then modify the class \c topoCreator to add a function that the user can use to create the new topology. If \c SimpleRouter
+is to be used in the new topology, the route computation class needs to be modified to compute routes based on the new
+topology.
+
+
+Q: How to add a new routing function?
+- Add a new routing function to the \c genericRC.h file that computes routes based on the source and destination.
+Depending on the situation, the initialization parameter classes, such as \c ring_init_params, may require modification.
+
+
+Q: Adding a new router:
+- To add a new type of router to Iris, create the header and source files in the \c components directory. You then need to
+decide how to tell the functions in \c topoCreator to create your new router.
+
+
+*/
+

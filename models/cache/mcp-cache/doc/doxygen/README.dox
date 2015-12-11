@@ -1,0 +1,267 @@
+/** @mainpage Mcp-cache 1.0
+
+@section sec_intro Introduction
+
+Manager-Client Paring (MCP) is a methodology for creating hierarchical cache coherence in shared memory multicore
+architectures. By defining a generic interface for cache coherence operations, MCP enables cache coherence hierarchy
+to be easily created while allowing different coherence realms that make up the hierarcy to use different coherence
+protocols. Details of MCP can be found in [1]:
+
+Mcp-cache is an implementation of MCP within the Manifold simulation framework. Currently only the MESI protocol is
+implemented. Other protocols will be implemented in the near future.
+
+
+
+\n
+@section dir_structure Directory Structure
+
+The following shows some of the most important files in the source code structure.
+
+\code
+mcp-cache
+|... coherence/
+|    |... ClientInterface.cpp/h
+|    |... ManagerInterface.cpp/h
+|    |... MESI_client.cpp/h
+|    |... MESI_manager.cpp/h
+|... L1_cache.cpp/h
+|... L2_cache.cpp/h
+|... MESI_L1_cache.cpp/h
+|... MESI_L2_cache.cpp/h
+|... MESI_LLP_cache.cpp/h
+|... MESI_LLS_cache.cpp/h
+\endcode
+
+- Coherence: This subdirectory contains the definition of the abstract client interface and
+manager interface. MESI_client and MESI_manager contain subclasses of the base interfaces for the
+MESI protocol.
+- Details about the rest of the files are given below.
+.
+
+\n
+@section sec_overview Overview
+
+With MCP, cache coherence is achieved through a hierarchy of coherence realms forming a
+tree structure, as shown in Figure 1. Within each realm there is a manager-client pair at the
+root of the sub-tree: the manager manages coherence within the realm, while the client acts as a
+representative of its realm in the parent realm. The top realm, however, does not have a client,
+and similarly, the leaf realms do not have managers. Using MCP each realm can achieive coherence
+using a different coherence protocol.
+
+\n
+\image html mcp.png "Figure 1 - MCP coherence hierarchy."
+\n
+
+
+As shown in Figure 1, within MCP, there are three types of nodes:
+
+- A top-tier node that only contains a manager.
+- A leaf-tier node that only contains a client.
+- An intermediate node that contains a manager and a client.
+
+Currently, mcp-cache has implemented a top-tier node and a leaf-tier node, as follows:
+
+- Class \c L2_cache implements a top-tier node that contains one manager for each cache line.
+- Class \c L1_cache implements a leaf-tier node that contains one client for each cache line.
+
+These two classes are abstract classes, therefore, user would use one of the following two sets of
+concrete classes:
+
+- \c MESI_LLP_cache and MESI_LLS_cache are concrete subclasses of L1_cache and L2_cache, respectively.
+- \c MESI_L1_cache and MESI_L2_cache are concrete subclasses of L1_cache and L2_cache, respectively.
+
+The two sets of classes each implement the MESI protocol. \c MESI_LLP_cache and MESI_LLS_cache
+implement a configuration where both caches live in the processor node. And \c MESI_L1_cache
+and \c MESI_L2_cache implement a configuration where MESI_L2_cache is separate from the processor
+node and accessed through the network.
+
+The two configurations are shown below in Figure 2 and Figure 3.
+
+
+\n
+\image html mcp_sys1.png "Figure 2: MESI_LLP_cache and MESI_LLS_cache in a Manifold simulation system."
+\n
+
+
+
+
+\n
+\image html mcp_sys2.png "Figure 3: MESI_L1_cache and MESI_L2_cache in a Manifold simulation system."
+\n
+
+  
+@subsection L1_proc L1-Processor Interface
+Both \c MESI_LLP_cache and \c MESI_L1_cache use the same L1-processor interface defined in \c L1_cache.
+In compliance with the requirements of Manifold components, L1_cache defines two communication
+ports, \c PORT_PROC, and \c PORT_L2, and corresponding event handlers.
+
+- Sending
+\n
+Sending replies to processor is through port \c PORT_PROC.
+\n
+\n
+- Receiving
+\n
+\c L1_cache expects to receive data type
+\c T from the processor that implements the following functions:
+    - \c get_addr(): returns the address for the request.
+    - \c is_read(): returns true if the request is a read (load) request.
+
+
+The event handler for requests from processor is:
+\code 
+template<typename T>
+void handle_processor_request(int, T*);
+\endcode
+
+\n
+@subsection L1_L2 L1-L2 Interface
+
+\c MESI_LLP_cache sends requests directly to its
+local LLS, or to a remote LLS through the network.
+
+- Sending
+\n
+Sending to local LLS is through port \c PORT_L2, and sending to remote LLS is through \c PORT_NET.
+\n
+\n
+- Receiving
+\n
+\code
+void handle_local_LLS_request(int, Coh_mem_req*); //for local LLS
+void handle_peer_and_manager_request(int, Coh_mem_req*); //for remote LLS
+\endcode
+
+\n
+\c MESI_L1_cache is slightly different.
+
+- Sending
+\n
+Sending to local MESI_L2_cache is through port \c PORT_L2.
+\n
+\n
+- Receiving
+\n
+\code
+void handle_peer_and_manager_request(int, Coh_mem_req*);
+\endcode
+
+
+
+
+\n
+@subsection L2_L1 L2-L1 and L2-MC Interfaces
+
+\c MESI_LLS_cache communicates either directly with its local LLP or through network with a remote LLP.
+
+- Sending
+\n
+Sending to local LLP is through port \c PORT_L1, and sending to remote LLP is through \c PORT_NET.
+\n
+\n
+- Receiving
+\n
+\code
+void handle_llp_incoming(int, Coh_mem_req*); //for local LLP
+void handle_incoming(int, Coh_mem_req*); //for remote LLP or memory controller.
+\endcode
+
+
+\n
+\c MESI_L2_cache has only 1 port, \c PORT_NET.
+
+- Sending
+\n
+Sending to MESI_L1_cache is through port \c PORT_NET.
+\n
+\n
+- Receiving
+\n
+\code
+void handle_incoming(int, Coh_mem_req*); //for MESI_L1_cache or memory controller.
+\endcode
+  
+
+\n
+@section sec_using Using Mcp-cache
+
+@subsection download Download
+Source code of mcp-cache is available at the following link: \n
+<ul><li> https://svn.ece.gatech.edu/repos/Manifold/trunk/code/models/cache/mcp-cache</ul>
+
+\n
+@subsection installation Installation
+
+To use mcp-cache, the pre-requisite is to install the Manifold kernel. Please refer to the Manifold spec for steps on how to proceed with this step. 
+
+After the kernel is built and installed, follow the steps below to build and install mcp-cache.
+
+-# Go to the mcp-cache source code directory.
+-# \c ./configure
+-# \c make
+-# <tt>make install</tt>
+
+These commands would install mcp-cache in the default location, <tt>/usr/local/manifold/mcp-cache</tt>.
+
+To install in a different location, specify \c --prefix when running the \c configure command,
+as follows.
+
+\code
+./configure --prefix=INSTALL_LOCATION
+\endcode
+
+
+\n
+@subsection howto To write a simulation program
+
+To use mcp-cache as part of your simulation program follow the following steps.
+
+-# Call \c Manifold::Init().
+-# Create a number of processor components, for example, Zesto processor component. For each
+processor component, create an \c MESI_L1_cache component.
+\code
+CompId_t l1_cid = Component :: Create<MESI_L1_cache>(lp, nodeID, l1_settings, l2map, l1_mshr_sz);
+\endcode
+    - \c lp - the logic process to which the \c MESI_L1_cache object is assigned.
+    - \c nodeID - the node ID of the \c MESI_L1_cache object.
+    - \c l1_settings - the parameters of the \c MESI_L1_cache object, such as size of the cache.
+    - \c l2map - the object that maps a memory address to the node ID of an L2 node.
+    - \c l1_mshr_sz - the MSHR size of the \c MESI_L1_cache object.
+    .
+-# Create a number of \c MESI_L2_cache components.
+\code
+compId_t l2_cid = Component :: Create<MESI_L2_cache>(lp, nodeID, l2_settings, mcmap1, l2_mshr_sz);
+\endcode
+    - \c lp - the logic process to which the \c MESI_L2_cache object is assigned.
+    - \c nodeID - the node ID of the \c MESI_L2_cache object.
+    - \c l2_settings - the parameters of the \c MESI_L2_cache object, such as size of the cache.
+    - \c mcmap - the object that maps a memory address to the node ID of a memory controller node.
+    - \c l2_mshr_sz - the MSHR size of the \c MESI_L2_cache object.
+    .
+-# Create a \c Clock object, a number of memory controllers, and a network.
+-# Connect the components.
+-# Specify a simulation stop time by calling \c Manifold::StopAt.
+-# Start the simulation by calling \c Manifold::Run.
+
+
+\n
+
+@section options Compile Options
+
+- \c DBG_MCP_CACHE_L1_CACHE - enables debug info for L1_cache to be printed.
+- \c DBG_MCP_CACHE_L2_CACHE - enables debug info for L2_cache to be printed.
+- \c MCP_DBG_FILTER - makes debug info to be printed only if the given condition is true. The most commonly used
+condition is that the clock cycle is within a certain range. For example, with \c -DMCP_DBG_FILTER="Manifold::NowTicks() > 8000
+&& Manifold::NowTicks() < 9000", debug info is only printed when the clock cycle is between 8000 and 9000.
+
+
+
+@section faq Frequently Asked Questions
+
+@section ref Reference
+ 
+[1] J.G. Beu, M.C. Rosier, and T.M. Conte, "Manager-Client Pairing: A Framework for Implementing Coherence Hierarchies", <em>2011 IEEE Micro,</em> 2011
+
+
+*/
+

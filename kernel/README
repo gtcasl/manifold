@@ -1,0 +1,12 @@
+Building the manifold kernle into libmanifold.a requries Autotools.
+
+To build and install libmanifold.a:
+
+1. autoconf
+2. automake -a
+3. ./configure
+OR ./configure <install_path>
+By default, the library is installed in /usr/local/lib/manifold. This
+can be changed by specifying a different path to configure.
+4. make
+5. make install
