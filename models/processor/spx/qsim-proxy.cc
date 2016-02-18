@@ -21,54 +21,88 @@ spx_qsim_proxy_t::~spx_qsim_proxy_t()
 
 void spx_qsim_proxy_t::handle_qsim_response(qsim_proxy_request_t *QsimProxyRequest)
 {
-    unsigned queue_index = 0;
-    while(queue_index < QsimProxyRequest->get_queue_size()) {
-        queue.push_back(QsimProxyRequest->get_queue_item(queue_index));
-        queue_index++;
-    }
+#ifdef DEBUG_NEW_QSIM_1
+    std::cerr << "******************" << std::endl << std::flush;
+    std::cerr << std::dec << pipeline->core->core_id << " recv: " << QsimProxyRequest->get_queue_size() << std::endl << std::flush;
+    //QsimProxyRequest->dump_queue();
+#endif
 
+    int sz = queue.size(); 
+    QsimProxyRequest->append_to(queue);
+#ifdef DEBUG_NEW_QSIM_1
+    std::cerr << "copied: " << queue.size() - sz << std::endl << std::flush;
+#endif
     delete QsimProxyRequest;
+#ifdef DEBUG_NEW_QSIM_1
+    std::cerr << "remain: " << queue.size() << std::endl << std::flush;
+    std::cerr << "******************" << std::endl << std::flush;
+#endif
 }
 
 int spx_qsim_proxy_t::run(int CoreID, unsigned InstCount) 
 {
     unsigned inst_count = InstCount;
+    std::vector<QueueItem>::iterator it; 
+    
 
-    while(queue.size()) {
-        QueueItem queue_item = *queue.begin();
+    for(it = queue.begin(); it != queue.end(); it++) {
+        QueueItem queue_item = *it;
 
-        if(queue_item.cb_type == QueueItem::INST_CB) {
-            if(inst_count == 0) { break; } /* While loop exit */
+        assert (CoreID == queue_item.id);
+
+        if(queue_item.cb_type == QueueItem::INST) {
+            if(inst_count == 0) { break; } /* loop exit */
             pipeline->Qsim_osd_state = QSIM_OSD_ACTIVE; /* Qsim core is active */
+
+#ifdef DEBUG_NEW_QSIM
+    std::cerr << "*( core " << std::dec << queue_item.id << " ): INST" << " | v: 0x" << std::hex << queue_item.data.inst.vaddr <<" p: 0x" << std::hex << queue_item.data.inst.paddr << std::endl << std::flush;
+#endif
             pipeline->Qsim_inst_cb(CoreID,
-                                   queue_item.data.inst_cb.vaddr,
-                                   queue_item.data.inst_cb.paddr,
-                                   queue_item.data.inst_cb.len,
-                                   (const uint8_t*)&queue_item.data.inst_cb.bytes,
-                                   (enum inst_type)queue_item.data.inst_cb.type);
+                                   queue_item.data.inst.vaddr,
+                                   queue_item.data.inst.paddr,
+                                   queue_item.data.inst.len,
+                                   (const uint8_t*)&queue_item.data.inst.bytes,
+                                   (enum inst_type)queue_item.data.inst.type);
             inst_count--;
         }
-        else if(queue_item.cb_type == QueueItem::MEM_CB) {
+        else if(queue_item.cb_type == QueueItem::MEM) {
             pipeline->Qsim_osd_state = QSIM_OSD_ACTIVE; /* Qsim core is active */
+
+#ifdef DEBUG_NEW_QSIM
+    std::cerr << "*( core " << std::dec << queue_item.id << " ): MEM" << " | v: 0x" << std::hex << queue_item.data.mem.vaddr <<" p: 0x" << std::hex << queue_item.data.mem.paddr << (queue_item.data.mem.type == 0 ? " RD" : " WR") << std::endl << std::flush;
+#endif
+ 
             pipeline->Qsim_mem_cb(CoreID,
-                                  queue_item.data.mem_cb.vaddr,
-                                  queue_item.data.mem_cb.paddr,
-                                  queue_item.data.mem_cb.size,
-                                  queue_item.data.mem_cb.type);
+                                  queue_item.data.mem.vaddr,
+                                  queue_item.data.mem.paddr,
+                                  queue_item.data.mem.size,
+                                  queue_item.data.mem.type);
         }
-        else if(queue_item.cb_type == QueueItem::REG_CB) {
+        else if(queue_item.cb_type == QueueItem::REG) {
             pipeline->Qsim_osd_state = QSIM_OSD_ACTIVE; /* Qsim core is active */
+#ifdef DEBUG_NEW_QSIM
+    std::cerr << "*( core " << std::dec << queue_item.id << " ): REG" << " | regid: " << std::dec << queue_item.data.reg.reg <<"  size: " << std::dec << static_cast<uint16_t>(queue_item.data.reg.size) << (queue_item.data.reg.type == 0 ? " SRC" : " DST") << std::endl << std::flush;
+#endif
+ 
             pipeline->Qsim_reg_cb(CoreID,
-                                  queue_item.data.reg_cb.reg,
-                                  queue_item.data.reg_cb.size,
-                                  queue_item.data.reg_cb.type);
+                                  queue_item.data.reg.reg,
+                                  queue_item.data.reg.size,
+                                  queue_item.data.reg.type);
         }
         else if(queue_item.cb_type == QueueItem::IDLE) {
+#ifdef DEBUG_NEW_QSIM
+    std::cerr << "*( core " << std::dec << queue_item.id << " ): IDLE" << std::endl << std::flush;
+#endif
             pipeline->Qsim_osd_state = QSIM_OSD_IDLE;
+            it++;
             break;
         }
         else if(queue_item.cb_type == QueueItem::TERMINATED) { 
+#ifdef DEBUG_NEW_QSIM
+    std::cerr << "*( core " << std::dec << queue_item.id << " ): TERMINATED" << std::endl << std::flush;
+#endif
             pipeline->Qsim_osd_state = QSIM_OSD_TERMINATED;
+            it++;
             break;
         }
         else { /* Unknown callback type. Something's wrong. */
@@ -77,10 +111,12 @@ int spx_qsim_proxy_t::run(int CoreID, unsigned InstCount)
             exit(EXIT_FAILURE);
         }
 
-        queue.erase(queue.begin()); /* Dequeue the head of QueueItem */
     }
 
-    if(queue.size() < SPX_QSIM_PROXY_QUEUE_SIZE*0.2) {
+    queue.erase(queue.begin(), it);
+
+    //if(queue.size() < SPX_QSIM_PROXY_QUEUE_SIZE*0.2) {
+    if(queue.size() < 10) {
         pipeline->core->send_qsim_proxy_request();
     }
 

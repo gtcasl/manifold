@@ -303,6 +303,9 @@ void outorder_t::frontend()
             int rc = qsim_proxy->run(core->core_id, 1);
 
             if(rc) { /* Core is active */
+                if (Qsim_osd_state != QSIM_OSD_ACTIVE) {
+                    std::cerr << " ( core " << std::dec << core->core_id << " ) | inst " << rc << " state " << Qsim_osd_state << std::endl << std::flush;
+                }
                 assert(Qsim_osd_state == QSIM_OSD_ACTIVE);
                 if(!next_inst->inflight) {
                     Qsim_post_cb(next_inst);

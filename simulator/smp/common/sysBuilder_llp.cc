@@ -105,9 +105,10 @@ void SysBuilder_llp :: config_components()
 	    // processor
 	    const char* proc_chars = m_config.lookup("processor.type");
 	    string proc_str = proc_chars;
-	    if(proc_str == "ZESTO") m_proc_builder = new Zesto_builder(this);
-	    else if (proc_str == "SIMPLE") m_proc_builder = new Simple_builder(this);
-	    else if (proc_str == "SPX") m_proc_builder = new Spx_builder(this);
+   /*     if(proc_str == "ZESTO") m_proc_builder = new Zesto_builder(this);*/
+		//else if (proc_str == "SIMPLE") m_proc_builder = new Simple_builder(this);
+		//else if (proc_str == "SPX") m_proc_builder = new Spx_builder(this);
+        if (proc_str == "SPX") m_proc_builder = new Spx_builder(this);      
 	    else {
 	        cerr << "Processor type  " << proc_str << "  not supported\n";
 	        exit(1);
@@ -299,26 +300,27 @@ void SysBuilder_llp :: build_system(vector<string>& args, const char *stateFile,
 void SysBuilder_llp :: create_qsimclient_nodes(int n_lps, vector<string>& args, int part)
 {
     switch(m_proc_builder->get_proc_type()) {
-	    case ProcBuilder::PROC_ZESTO: {
-	        if(args.size() != 2) {
-		        cerr << "Zesto core needs: <server> <port>\n";
-		        exit(1);
-		    }
-		    Zesto_builder* z = dynamic_cast<Zesto_builder*>(m_proc_builder);
-		    assert(z);
-		    z->set_qsimclient_vals(args[0].c_str(), atoi(args[1].c_str()));
-	        break;
-        }
-	    case ProcBuilder::PROC_SIMPLE: {
-	        if(args.size() != 2) {
-		        cerr << "SimpleProc core needs:  <server> <port>\n";
-		        exit(1);
-		    }
-		    Simple_builder* s = dynamic_cast<Simple_builder*>(m_proc_builder);
-		    assert(s);
-		    s->set_qsimclient_vals(m_cache_builder->get_l1_block_size(), args[0].c_str(), atoi(args[1].c_str()));
-	        break;
-        }
+   /*     case ProcBuilder::PROC_ZESTO: {*/
+			//if(args.size() != 2) {
+				//cerr << "Zesto core needs: <server> <port>\n";
+				//exit(1);
+			//}
+			//Zesto_builder* z = dynamic_cast<Zesto_builder*>(m_proc_builder);
+			//assert(z);
+			//z->set_qsimclient_vals(args[0].c_str(), atoi(args[1].c_str()));
+			//break;
+        //}
+		//case ProcBuilder::PROC_SIMPLE: {
+			//if(args.size() != 2) {
+				//cerr << "SimpleProc core needs:  <server> <port>\n";
+				//exit(1);
+			//}
+			//Simple_builder* s = dynamic_cast<Simple_builder*>(m_proc_builder);
+			//assert(s);
+			//s->set_qsimclient_vals(m_cache_builder->get_l1_block_size(), args[0].c_str(), atoi(args[1].c_str()));
+			//break;
+        //}
+
 	    case ProcBuilder::PROC_SPX: {
 	        if(args.size() != 0) {
 		        cerr << "SPX core requires no command-line arguments\n";
@@ -340,26 +342,27 @@ void SysBuilder_llp :: create_qsimclient_nodes(int n_lps, vector<string>& args, 
 void SysBuilder_llp :: create_qsimlib_nodes(Qsim::OSDomain* qsim_osd, vector<string>& args)
 {
     switch(m_proc_builder->get_proc_type()) {
-	    case ProcBuilder::PROC_ZESTO: {
-	        if(args.size() != 0) {
-		        cerr << "Zesto core needs:  [no arguments]\n";
-		        exit(1);
-		    }
-		    Zesto_builder* z = dynamic_cast<Zesto_builder*>(m_proc_builder);
-		    assert(z);
-		    z->set_qsimlib_vals(qsim_osd);
-	        break;
-        }
-	    case ProcBuilder::PROC_SIMPLE: {
-	        if(args.size() != 0) {
-		        cerr << "SimpleProc core needs:  [no arguments]\n";
-		        exit(1);
-		    }
-		    Simple_builder* s = dynamic_cast<Simple_builder*>(m_proc_builder);
-		    assert(s);
-		    s->set_qsimlib_vals(m_cache_builder->get_l1_block_size(), qsim_osd);
-	        break;
-        }
+   /*     case ProcBuilder::PROC_ZESTO: {*/
+			//if(args.size() != 0) {
+				//cerr << "Zesto core needs:  [no arguments]\n";
+				//exit(1);
+			//}
+			//Zesto_builder* z = dynamic_cast<Zesto_builder*>(m_proc_builder);
+			//assert(z);
+			//z->set_qsimlib_vals(qsim_osd);
+			//break;
+        //}
+		//case ProcBuilder::PROC_SIMPLE: {
+			//if(args.size() != 0) {
+				//cerr << "SimpleProc core needs:  [no arguments]\n";
+				//exit(1);
+			//}
+			//Simple_builder* s = dynamic_cast<Simple_builder*>(m_proc_builder);
+			//assert(s);
+			//s->set_qsimlib_vals(m_cache_builder->get_l1_block_size(), qsim_osd);
+			//break;
+        //}
+
 	    case ProcBuilder::PROC_SPX: {
 		    if(args.size() != 0) {
 		        cerr << "SPX core needs:  [no arguments]\n";
@@ -386,24 +389,25 @@ void SysBuilder_llp :: create_qsimproxy_nodes(vector<string>& args, const char* 
     m_qsim_builder->create_qsim(0);
 
     switch(m_proc_builder->get_proc_type()) {
-	    case ProcBuilder::PROC_ZESTO: {
-	        if(args.size() != 0) {
-		        cerr << "Zesto core needs:  [no arguments]\n";
-		        exit(1);
-		    }
-		    Zesto_builder* z = dynamic_cast<Zesto_builder*>(m_proc_builder);
-		    assert(z);
-	        break;
-        }
-	    case ProcBuilder::PROC_SIMPLE: {
-	        if(args.size() != 0) {
-		        cerr << "SimpleProc core needs:  [no arguments]\n";
-		        exit(1);
-		    }
-		    Simple_builder* s = dynamic_cast<Simple_builder*>(m_proc_builder);
-		    assert(s);
-	        break;
-        }
+	   /* case ProcBuilder::PROC_ZESTO: {*/
+			//if(args.size() != 0) {
+				//cerr << "Zesto core needs:  [no arguments]\n";
+				//exit(1);
+			//}
+			//Zesto_builder* z = dynamic_cast<Zesto_builder*>(m_proc_builder);
+			//assert(z);
+			//break;
+        //}
+		//case ProcBuilder::PROC_SIMPLE: {
+			//if(args.size() != 0) {
+				//cerr << "SimpleProc core needs:  [no arguments]\n";
+				//exit(1);
+			//}
+			//Simple_builder* s = dynamic_cast<Simple_builder*>(m_proc_builder);
+			//assert(s);
+			//break;
+       /* }*/
+        
 	    case ProcBuilder::PROC_SPX: {
 		    if(args.size() != 0) {
 		        cerr << "SPX core needs:  [no arguments]\n";
@@ -426,26 +430,27 @@ void SysBuilder_llp :: create_qsimproxy_nodes(vector<string>& args, const char* 
 void SysBuilder_llp :: create_trace_nodes(int n_lps, vector<string>& args, int part)
 {
     switch(m_proc_builder->get_proc_type()) {
-	    case ProcBuilder::PROC_ZESTO: {
-	        if(args.size() != 1) {
-		        cerr << "Usage for Zesto core:  <trace_file_basename>\n";
-		        exit(1);
-		    }
-		    Zesto_builder* z = dynamic_cast<Zesto_builder*>(m_proc_builder);
-		    assert(z);
-		    z->set_trace_vals(args[0].c_str());
-	        break;
-        }
-	    case ProcBuilder::PROC_SIMPLE: {
-	        if(args.size() != 1) {
-		        cerr << "Usage for SimpleProc core:  <trace_file_basename>\n";
-		        exit(1);
-		    }
-		    Simple_builder* s = dynamic_cast<Simple_builder*>(m_proc_builder);
-		    assert(s);
-		    s->set_trace_vals(m_cache_builder->get_l1_block_size(), args[0].c_str());
-	        break;
-        }
+	   /* case ProcBuilder::PROC_ZESTO: {*/
+			//if(args.size() != 1) {
+				//cerr << "Usage for Zesto core:  <trace_file_basename>\n";
+				//exit(1);
+			//}
+			//Zesto_builder* z = dynamic_cast<Zesto_builder*>(m_proc_builder);
+			//assert(z);
+			//z->set_trace_vals(args[0].c_str());
+			//break;
+        //}
+		//case ProcBuilder::PROC_SIMPLE: {
+			//if(args.size() != 1) {
+				//cerr << "Usage for SimpleProc core:  <trace_file_basename>\n";
+				//exit(1);
+			//}
+			//Simple_builder* s = dynamic_cast<Simple_builder*>(m_proc_builder);
+			//assert(s);
+			//s->set_trace_vals(m_cache_builder->get_l1_block_size(), args[0].c_str());
+			//break;
+        //}
+        
 	    default: { assert(0); }
     }
 

@@ -121,7 +121,7 @@ public:
   //! @arg \c isTimed A boolean indicating if the link delay is specified in Time_t or Ticks_t.
   //! @arg \c isHalf A boolean indicating if the link delay unit is half-tick.
   template<typename T, typename T2>
-  void AddInput(int inputIndex, void (T::*handler)(int, T2), T* obj, Clock* c, bool isTimed, bool isHalf);
+  void AddInput(int inputIndex, void (T::*handler)(int, T2), T* obj, Clock* c, bool isTimed=false, bool isHalf=false);
 
   //! Used to send data on an output link of any type
   //!  @arg The output index(port) number to send the data on. 

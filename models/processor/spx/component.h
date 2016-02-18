@@ -92,6 +92,7 @@ private:
     pipeline_t *pipeline;
 };
 
+#define QSIM_N_REGS QSIM_X86_N_REGS
 #define SPX_N_FLAGS 6
 #define SPX_N_FPREGS 8
 #define IS_IREG(i) ((i<QSIM_FP0)||(i>QSIM_FPSP))

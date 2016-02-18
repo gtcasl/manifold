@@ -1,11 +1,11 @@
 #include "proc_builder.h"
 #include "sysBuilder_llp.h"
-#include "zesto/qsimclient-core.h"
-#include "zesto/qsimlib-core.h"
-#include "zesto/trace-core.h"
-#include "simple-proc/qsim-proc.h"
-#include "simple-proc/qsimlib-proc.h"
-#include "simple-proc/trace-proc.h"
+//#include "zesto/qsimclient-core.h"
+//#include "zesto/qsimlib-core.h"
+//#include "zesto/trace-core.h"
+//#include "simple-proc/qsim-proc.h"
+//#include "simple-proc/qsimlib-proc.h"
+//#include "simple-proc/trace-proc.h"
 #include "spx/core.h"
 #include "proxy/proxy.h"
 #include "mcp-cache/MESI_LLP_cache.h"
@@ -13,8 +13,8 @@
 
 using namespace libconfig;
 using namespace manifold::kernel;
-using namespace manifold::zesto;
-using namespace manifold::simple_proc;
+//using namespace manifold::zesto;
+//using namespace manifold::simple_proc;
 using namespace manifold::spx;
 using namespace manifold::qsim_proxy;
 using namespace manifold::mcp_cache_namespace;
@@ -55,7 +55,7 @@ void ProcBuilder :: print_config(std::ostream& out)
     }
 }
 
-
+#if 0
 //####################################################################
 //####################################################################
 void Zesto_builder :: read_config(Config& config)
@@ -428,7 +428,7 @@ void Simple_builder :: print_stats(std::ostream& out)
 	    }
     }
 }
-
+#endif
 
 //####################################################################
 //####################################################################
