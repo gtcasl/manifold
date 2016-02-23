@@ -1,0 +1,57 @@
+language: cpp
+sudo: required
+dist: trusty
+addons:
+    apt:
+        sources:
+        - ubuntu-toolchain-r-test
+        packages:
+        - g++-4.9
+        - clang-3.5
+        - libconfig++-dev
+        - openmpi-bin
+        - openmpi-common
+        - libopenmpi-dev
+        - gcc-aarch64-linux-gnu
+        - g++-aarch64-linux-gnu
+        - bc
+        - qemu-user
+        - qemu
+before_install:
+    - sudo apt-get -y build-dep qemu linux-meta
+    - export MANIFOLD_DIR=`pwd`
+    - git clone https://github.com/gtcasl/qsim
+    - cd qsim
+    - git submodule update --init --recursive
+    - export QSIM_PREFIX=`pwd`
+    - export LD_LIBRARY_PATH=$QSIM_PREFIX/lib:$LD_LIBRARY_PATH
+    - cd capstone
+    - make
+    - cd ..
+    - cd distorm/distorm64/build/linux
+    - make clib
+    - cd $QSIM_PREFIX/linux
+    - ./getkernel.sh
+    - cd $QSIM_PREFIX/initrd
+    - ./getbusybox.sh
+    - cd $QSIM_PREFIX
+    - make release install
+    - cd ..
+script:
+    - ./configure QSIMINC=${QSIM_PREFIX}/include
+    - make
+    - cd ${MANIFOLD_DIR}/simulator/smp/QsimProxy
+    - make
+after_failure:
+    - cat ${MANIFOLD_DIR}/config.log
+compiler:
+- clang
+- gcc
+git:
+  submodules: false
+notifications:
+    email:
+        recipients:
+            - xiheasas@gmail.com
+        on_success: change
+        on_failure: always

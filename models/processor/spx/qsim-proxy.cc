@@ -12,6 +12,7 @@ spx_qsim_proxy_t::spx_qsim_proxy_t(pipeline_t *Pipeline) :
 {
     /* Reserve fixed queue length. */
     queue.reserve(SPX_QSIM_PROXY_QUEUE_SIZE);
+    queue.clear();
 }
 
 spx_qsim_proxy_t::~spx_qsim_proxy_t()
@@ -116,7 +117,7 @@ int spx_qsim_proxy_t::run(int CoreID, unsigned InstCount)
     queue.erase(queue.begin(), it);
 
     //if(queue.size() < SPX_QSIM_PROXY_QUEUE_SIZE*0.2) {
-    if(queue.size() < 10) {
+    if(queue.size() < 5) {
         pipeline->core->send_qsim_proxy_request();
     }
 

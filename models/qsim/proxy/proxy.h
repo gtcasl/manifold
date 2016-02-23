@@ -6,11 +6,12 @@
 #include "kernel/component.h"
 #include "kernel/clock.h"
 
-#define QSIM_PROXY_QUEUE_SIZE 256
+#define QSIM_RUN_GRANULARITY   1000
+#define QSIM_PROXY_QUEUE_SIZE 5000
 
 //#define DEBUG_NEW_QSIM 1 
-
 //#define DEBUG_NEW_QSIM_1 1 
+//#define DEBUG_NEW_QSIM_2 1 
 
 namespace manifold {
 namespace qsim_proxy {
@@ -48,11 +49,11 @@ void qsim_proxy_t::handle_core_request(int temp, T *CoreRequest)
        Utilize only a fraction of queue space to avoid possible overflow. */
     //while(CoreRequest->get_queue_size() < QSIM_PROXY_QUEUE_SIZE*0.8) {
     do {
-        buffer.clear();
+        //buffer.clear();
         // run will execute at least a translation-block in qim-0.2
-        int rc = qsim_osd->run(core_id, 1000);
-#ifdef DEBUG_NEW_QSIM_1
-        std::cerr << "( core: " << std::dec << core_id << " ) | inst " << std::dec << rc << " tid "  << qsim_osd->get_tid(core_id) << " idle " << qsim_osd->idle(core_id) << std::endl << std::flush;
+        int rc = qsim_osd->run(core_id, QSIM_RUN_GRANULARITY);
+#if  defined(DEBUG_NEW_QSIM_2) || defined(DEBUG_NEW_QSIM_1)
+        std::cerr << "( core: " << std::dec << core_id << " ) | inst " << std::dec << rc << " tid "  << qsim_osd->get_tid(core_id) << " idle " << qsim_osd->idle(core_id) << " buffer " << buffer.size() << std::endl << std::flush;
 #endif
  
         if(!rc) {
@@ -61,13 +62,18 @@ void qsim_proxy_t::handle_core_request(int temp, T *CoreRequest)
             if(!qsim_osd->booted(core_id)) {
                 queue_item.cb_type = Qsim::QueueItem::TERMINATED;
                 queue_item.id = core_id;
+
+                CoreRequest->push_back(queue_item);
             }
             else {
                 assert(qsim_osd->idle(core_id));
                 queue_item.cb_type = Qsim::QueueItem::IDLE;
                 queue_item.id = core_id;
+
+                for(int i = 0; i < QSIM_RUN_GRANULARITY; i++) {
+                    CoreRequest->push_back(queue_item);
+                }
             }
-            CoreRequest->push_back(queue_item);
             break;
         }
         else {
@@ -81,7 +87,10 @@ void qsim_proxy_t::handle_core_request(int temp, T *CoreRequest)
                 Qsim::QueueItem queue_item;
                 queue_item.cb_type = Qsim::QueueItem::IDLE;
                 queue_item.id = core_id;
-                CoreRequest->push_back(queue_item);
+
+                for(int i = 0; i < QSIM_RUN_GRANULARITY; i++) {
+                    CoreRequest->push_back(queue_item);
+                }
                 break;
             } else {
 #ifdef DEBUG_NEW_QSIM
@@ -95,13 +104,13 @@ void qsim_proxy_t::handle_core_request(int temp, T *CoreRequest)
 #ifdef DEBUG_NEW_QSIM
                 std::cerr << CoreRequest->get_queue_size() << std::endl << std::flush;
 #endif
-
-                buffer.clear();
             }
         }
     } while(0);
+
+    buffer.clear();
 #ifdef DEBUG_NEW_QSIM_1
-        std::cerr << "( Core " << std::dec << CoreRequest->get_core_id() << " ) [receive request from qsim] | " << std::dec << CoreRequest->get_queue_size() << std::endl << std::flush;
+    std::cerr << "( Core " << std::dec << CoreRequest->get_core_id() << " ) [receive request from qsim] | " << std::dec << CoreRequest->get_queue_size() << std::endl << std::flush;
 #endif
     Send(CoreRequest->get_port_id(), CoreRequest);
 }

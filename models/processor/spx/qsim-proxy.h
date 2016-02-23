@@ -6,7 +6,8 @@
 #include "pipeline.h"
 
 /* Refer to ../../qsim/proxy/proxy.h:QSIM_PROXY_QUEUE_SIZE */
-#define SPX_QSIM_PROXY_QUEUE_SIZE 256
+//#define SPX_QSIM_PROXY_QUEUE_SIZE 256
+#define SPX_QSIM_PROXY_QUEUE_SIZE 5000
 
 //#define DEBUG_NEW_QSIM 1
 //#define DEBUG_NEW_QSIM_1 1

@@ -1,0 +1,12 @@
+*.o
+*.a
+*.status
+*.log
+.deps
+dep
+autom4te.cache
+Makefile
+smp_llp
+smp_l1l2
+DBG_LOG0
+
