@@ -66,7 +66,8 @@ void qsim_proxy_t::handle_core_request(int temp, T *CoreRequest)
                 CoreRequest->push_back(queue_item);
             }
             else {
-                assert(qsim_osd->idle(core_id));
+                //assert(qsim_osd->idle(core_id));
+                //assert(qsim_osd.get_tid(i) != qsim_osd.get_bench_pid());
                 queue_item.cb_type = Qsim::QueueItem::IDLE;
                 queue_item.id = core_id;
 

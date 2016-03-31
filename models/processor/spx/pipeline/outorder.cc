@@ -17,6 +17,7 @@ outorder_t::outorder_t(spx_core_t *spx_core, libconfig::Config *parser)
 
     // set config
     set_config(parser);
+    assert(QSIM_N_REGS != 0);
     
     // initialize core components
     instQ = new instQ_t((pipeline_t*)this,config.instQ_size,config.cache_line_width);
@@ -63,6 +64,18 @@ void outorder_t::set_config(libconfig::Config *parser)
         config.LDQ_size = parser->lookup("LDQ_size");
         config.STQ_size = parser->lookup("STQ_size");
         config.ROB_size = parser->lookup("ROB_size");
+
+        const char *arch_string = parser->lookup("arch_type");
+        switch (str2int(arch_string)) {
+            case str2int("x64") : config.arch_type = SPX_X64; break;
+            case str2int("a64") : config.arch_type = SPX_A64; break;
+            case str2int("x86") : config.arch_type = SPX_X86; break;
+            default: 
+                fprintf(stderr, "unknown arch_type in config file, please specify among x86/x64/a64\n");
+                exit(1);
+        }
+        fprintf(stdout, "arch_type %d\n", config.arch_type);
+         
         
         config.FU_delay[SPX_FU_INT] = parser->lookup("FU_INT.delay");
         config.FU_delay[SPX_FU_MUL] = parser->lookup("FU_MUL.delay");
@@ -102,15 +115,20 @@ void outorder_t::set_config(libconfig::Config *parser)
         setting = &parser->lookup("FU_ST.port");
         for(int i = 0; i < setting->getLength(); i++)
             config.FU_port[SPX_FU_ST].push_back((*setting)[i]);
-            
-        // Qsim currently supports only 32-bit mode.
-        config.mem_addr_mask = ~0x0;
-        config.mem_addr_mask = (config.mem_addr_mask<<32)>>32;
-        
-        config.cache_line_width = 64;
-        if(parser->exists("cache_line_width")) {
-            config.cache_line_width = parser->lookup("cache_line_width");
+
+        // add switch between different arch
+        if (config.arch_type == SPX_X86) {
+            QSIM_N_REGS = QSIM_X86_N_REGS;
+            config.mem_addr_mask = ~0x0;
+            config.mem_addr_mask = (config.mem_addr_mask<<32)>>32;
+        } else if (config.arch_type == SPX_X64){ // SPX_X64 || SPX_A64
+            QSIM_N_REGS = QSIM_X86_N_REGS;
+            config.mem_addr_mask = ~0x0;
+        } else {
+            QSIM_N_REGS = QSIM_ARM64_ENDING;
+            config.mem_addr_mask = ~0x0;
         }
+        fprintf(stdout,"mem addr mask: 0x%lx\n", config.mem_addr_mask);
             
 #ifdef LIBEI
         cache_config_t cache_config;

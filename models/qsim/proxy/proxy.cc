@@ -70,7 +70,7 @@ void qsim_proxy_t::inst_cb(int core_id, uint64_t vaddr, uint64_t paddr, uint8_t 
 void qsim_proxy_t::mem_cb(int core_id, uint64_t vaddr, uint64_t paddr, uint8_t size, int type)
 {
 #ifdef DEBUG_NEW_QSIM
-    std::cerr << "( core " << std::dec << core_id << " ): MEM" << " | v: 0x" << std::hex << vaddr <<" p: 0x" << std::hex << paddr << (type == 0 ? " RD" : " WR") << std::endl << std::flush;
+    std::cerr << "@ " << std::dec << manifold::kernel::Manifold::NowTicks() << " ( core " << std::dec << core_id << " ): MEM" << " | v: 0x" << std::hex << vaddr <<" p: 0x" << std::hex << paddr << (type == 0 ? " RD" : " WR") << std::endl << std::flush;
 #endif
     buffer.push_back(QueueItem(core_id, vaddr, paddr, size, type));
 }

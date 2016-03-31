@@ -91,6 +91,7 @@ int spx_qsim_proxy_t::run(int CoreID, unsigned InstCount)
                                   queue_item.data.reg.type);
         }
         else if(queue_item.cb_type == QueueItem::IDLE) {
+            if(inst_count != InstCount) { break; } /* loop exit */
 #ifdef DEBUG_NEW_QSIM
     std::cerr << "*( core " << std::dec << queue_item.id << " ): IDLE" << std::endl << std::flush;
 #endif
@@ -99,6 +100,7 @@ int spx_qsim_proxy_t::run(int CoreID, unsigned InstCount)
             break;
         }
         else if(queue_item.cb_type == QueueItem::TERMINATED) { 
+            if(inst_count != InstCount) { break; } /* loop exit */
 #ifdef DEBUG_NEW_QSIM
     std::cerr << "*( core " << std::dec << queue_item.id << " ): TERMINATED" << std::endl << std::flush;
 #endif

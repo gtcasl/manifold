@@ -21,6 +21,19 @@
 namespace manifold {
 namespace spx {
 
+constexpr unsigned int str2int(const char* str, int h = 0)
+{
+    return !str[h] ? 5381 : (str2int(str, h+1)*33) ^ str[h];
+}
+
+enum SPX_ARCH_TYPES
+{
+    SPX_X86 = 0,
+    SPX_X64,
+    SPX_A64, // a64 stands for arm64
+    SPX_NUM_ARCH_TYPES
+};
+
 enum SPX_PIPELINE_TYPES
 {
     SPX_PIPELINE_OUTORDER = 0,
@@ -67,6 +80,8 @@ public:
 
     uint64_t cache_line_width;
     uint64_t mem_addr_mask;
+
+    enum SPX_ARCH_TYPES arch_type;
 };
 
 class pipeline_stats_t

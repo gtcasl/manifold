@@ -7,6 +7,8 @@
 using namespace std;
 using namespace manifold::spx;
 
+int manifold::spx::QSIM_N_REGS = 0;
+
 instQ_t::instQ_t(pipeline_t *pl, int instQ_size, int cache_line_width) :
     size(instQ_size), occupancy(0), fetch_addr(0), pipeline(pl)
 {
@@ -326,7 +328,7 @@ RS_t::RS_t(pipeline_t *pl, int RS_size, int exec_port, std::vector<int> *FU_port
 RS_t::~RS_t()
 {
     for(int i = 0; i < port; i++)
-        ready[port].clear();
+        ready[i].clear();
     delete [] ready;
     delete [] port_loads;
 }
@@ -519,6 +521,8 @@ RF_t::RF_t(pipeline_t *pl) :
     fpregs_stack_ptr(0),
     pipeline(pl)
 {
+    regs.reserve(QSIM_N_REGS);
+
     for(int i = 0; i < QSIM_N_REGS; i++) { regs[i] = NULL; }
     for(int i = 0; i < SPX_N_FLAGS; i++) { flags[i] = NULL; }
     for(int i = 0; i < SPX_N_FPREGS; i++) { fpregs[i] = NULL; }
@@ -538,7 +542,7 @@ void RF_t::resolve_dependency(inst_t *inst)
             pipeline->counter.dependency_check.switching++;
             pipeline->counter.rat.search++;
 #endif
-            if(regs[i]) { // Dependency exists.
+            if(regs[i] != NULL)  { // Dependency exists.
 #ifdef LIBKITFOX
                 pipeline->counter.rat.read++;
 #endif
@@ -567,6 +571,21 @@ void RF_t::resolve_dependency(inst_t *inst)
         }
     }
                     
+    // reg dest dependency
+    uint64_t dest_reg_mask = inst->dest_reg;
+    for(int i = 0; dest_reg_mask > 0; dest_reg_mask = dest_reg_mask>>1, i++) {
+        if(dest_reg_mask&0x01) {
+#ifdef LIBKITFOX
+            pipeline->counter.rat.write++;
+            pipeline->counter.freelist.read++;
+#endif
+            regs[i] = inst; // Inst writes reg.
+        }
+    }
+
+    if (pipeline->config.arch_type == SPX_A64)
+        return ;
+
     // flag src dependency
     uint8_t src_flag_mask = inst->src_flag;
     for(int i = 0; src_flag_mask > 0; src_flag_mask = src_flag_mask>>1, i++) {
@@ -582,18 +601,6 @@ void RF_t::resolve_dependency(inst_t *inst)
         }
     }
     
-    // reg dest dependency
-    uint64_t dest_reg_mask = inst->dest_reg;
-    for(int i = 0; dest_reg_mask > 0; dest_reg_mask = dest_reg_mask>>1, i++) {
-        if(dest_reg_mask&0x01) {
-#ifdef LIBKITFOX
-            pipeline->counter.rat.write++;
-            pipeline->counter.freelist.read++;
-#endif
-            regs[i] = inst; // Inst writes reg.
-        }
-    }
-
     // flag dest dependency
     uint8_t dest_flag_mask = inst->dest_flag;
     for(int i = 0; dest_flag_mask > 0; dest_flag_mask = dest_flag_mask>>1, i++) {
@@ -601,7 +608,7 @@ void RF_t::resolve_dependency(inst_t *inst)
             flags[i] = inst; // Inst writes flag.
     }
 
-    // fpregs dependency
+    // fpregs dependency for X87 FPU
     if(inst->opcode >= QSIM_INST_FPBASIC) {
         switch(inst->memcode) {
             case SPX_MEM_LD: { // FLD
@@ -719,6 +726,9 @@ void RF_t::writeback(inst_t *inst)
             if(regs[i] == inst) { regs[i] = NULL; } 
         }
     }
+
+    if (pipeline->config.arch_type == SPX_A64)
+        return ;
 
     // Inst writes flag.
     uint8_t dest_flag_mask = inst->dest_flag;
@@ -1013,8 +1023,8 @@ void LDQ_t::handle_cache()
 
 #ifdef SPX_DEBUG
         fprintf(stdout,"SPX_DEBUG (core %d) | %lu: LDQ.handle_cache uop %lu (Mop %lu)\n",pipeline->core->core_id,pipeline->core->clock_cycle,inst->uop_sequence,inst->Mop_sequence);
+        //fprintf(stderr,"@%d SPX_DEBUG (core %d) | LDQ.handle_cache LD 0x%lx\n",manifold::kernel::Manifold::NowTicks(), pipeline->core->core_id,inst->data.paddr);
 #endif
-
         // Send cache request.
         cache_request_t *cache_request = new cache_request_t(inst,pipeline->core->core_id,pipeline->core->node_id,inst->data.paddr,SPX_MEM_LD);
         inst->memory_request_time_stamp = pipeline->core->clock_cycle;
@@ -1148,6 +1158,7 @@ void STQ_t::handle_cache()
 
 #ifdef SPX_DEBUG
         fprintf(stdout,"SPX_DEBUG (core %d) | %lu: STQ.handle_cache uop %lu (Mop %lu)\n",pipeline->core->core_id,pipeline->core->clock_cycle,inst->uop_sequence,inst->Mop_sequence);
+        //fprintf(stderr,"@%d SPX_DEBUG (core %d) | STQ.handle_cache ST 0x%lx\n",manifold::kernel::Manifold::NowTicks(), pipeline->core->core_id,inst->data.paddr);
 #endif
 
         // Since store is written back when the ROB commits, clear memory disambiguation map.

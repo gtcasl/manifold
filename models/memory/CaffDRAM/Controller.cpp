@@ -299,6 +299,10 @@ void Controller :: try_send()
 
 	NetworkPacket* req = m_completed_reqs.front();
 	m_completed_reqs.pop_front();
+
+#ifdef DBG_CAFFDRAM
+cerr << "@ " << dec << manifold::kernel::Manifold::NowTicks() << " mc completes transaction dst= " << req->get_dst() << " port= " << req->get_dst_port() <<dec<<endl;
+#endif
         Send(PORT0, req);
         m_downstream_credits--;
 

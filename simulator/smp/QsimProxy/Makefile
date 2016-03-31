@@ -1,7 +1,7 @@
 CXX = mpic++
 QSIM_ROOT = ${QSIM_PREFIX}
 MODELS_DIR = ../../../models
-CPPFLAGS += -Wall -g -DUSE_QSIM -DSTATS -I$(QSIM_ROOT)/include -I ../../.. -I$(MODELS_DIR)/processor -I$(MODELS_DIR)/qsim -I$(MODELS_DIR)/cache -I$(MODELS_DIR)/network -I$(MODELS_DIR)/memory -I$(MODELS_DIR)/cross
+CPPFLAGS += -Wall -g -DUSE_QSIM -DSTATS -I$(QSIM_ROOT)/include -I ../../.. -I$(MODELS_DIR)/processor -I$(MODELS_DIR)/qsim -I$(MODELS_DIR)/cache -I$(MODELS_DIR)/network -I$(MODELS_DIR)/memory -I$(MODELS_DIR)/cross -std=c++11
 LDFLAGS = -lqsim -lmcp-iris -L$(QSIM_ROOT)/lib -L$(MODELS_DIR)/cross/mcp_cache-iris -liris -L$(MODELS_DIR)/network/iris -lmcp-cache -L$(MODELS_DIR)/cache/mcp-cache -lspx -L$(MODELS_DIR)/processor/spx -lqsim_proxy -L$(MODELS_DIR)/qsim/proxy -lqsim_interrupt_handler -L$(MODELS_DIR)/qsim/interrupt_handler -lcaffdram -L$(MODELS_DIR)/memory/CaffDRAM -lDRAMSim2 -L$(MODELS_DIR)/memory/DRAMSim2 -lDRAMSim2proper -L$(MODELS_DIR)/memory/DRAMSim2/DRAMSim2-2.2.2 -L../../../kernel -lmanifold -ldl -lrt
 
 VPATH = ../common

@@ -377,6 +377,11 @@ GenNetworkInterface<T>::handle_new_packet_event (int port, T* data )
 	delete data;
     }
     else {
+
+#ifdef DBG_IRIS
+    T* pkt = (T*) data;
+    cout << "@ " << manifold::kernel::Manifold::NowTicks() << " iris received pkt src= " << pkt->get_src() << " port= " << pkt->get_src_port() << " dst= " << pkt->get_dst() << " port= " << pkt->get_dst_port() <<endl;
+#endif
 	#ifdef IRIS_STATS_T2T_DELAY
 	input_pkt_buffer.push_back(PktWrapper(data, manifold::kernel::Manifold::NowTicks()));
 	#else

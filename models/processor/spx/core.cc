@@ -100,7 +100,7 @@ void spx_core_t::tick()
     pipeline->counter.undiff.switching++;
 #else
     // This will periodically print the stats to show the progress of simulation -- for debugging
-    print_stats(10000, stdout);
+    print_stats(100000, stdout);
 #endif
 }
 

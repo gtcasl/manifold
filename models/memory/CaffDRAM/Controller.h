@@ -19,7 +19,6 @@
 #include <map>
 #include <list>
 
-
 namespace manifold {
 namespace caffdram {
 
@@ -130,7 +129,7 @@ void Controller :: handle_request(int, uarch::NetworkPacket* pkt)
 
     if(req->is_read()) {
 #ifdef DBG_CAFFDRAM
-cout << "mc received LD, src= " << pkt->get_src() << " port= " << pkt->get_src_port() << " addr= " <<hex<< req->get_addr() <<dec<<endl;
+cerr << "@ " << dec << manifold::kernel::Manifold::NowTicks() << " mc [" << m_nid << "] received LD, src= " << pkt->get_src() << " port= " << pkt->get_src_port() << "dst= " << pkt->get_dst() << " port= " << pkt->get_dst_port() << " addr= " <<hex<< req->get_addr() <<dec<<endl;
 #endif
 	//stats
 	m_ld_misses[pkt->get_src()]++;
@@ -162,7 +161,7 @@ cout << "mc received LD, src= " << pkt->get_src() << " port= " << pkt->get_src_p
     }
     else { //write request
 #ifdef DBG_CAFFDRAM
-cout << "mc received ST, src= " << pkt->get_src() << " port= " << pkt->get_src_port() << " addr= " <<hex<< req->get_addr() <<dec<<endl;
+cerr << "@ " << dec << manifold::kernel::Manifold::NowTicks() << " mc [" << m_nid << "] received ST, src= " << pkt->get_src() << " port= " << pkt->get_src_port() << "dst= " << pkt->get_dst() << " port= " << pkt->get_dst_port() << " addr= " <<hex<< req->get_addr() <<dec<<endl;
 #endif
 	//stats
 	m_stores[req->get_src()]++;
