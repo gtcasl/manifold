@@ -56,7 +56,7 @@ Link<T>* Component::AddOutputLink(int sourceIndex) throw (LinkTypeMismatchExcept
 //! @arg isHalf  Flag set to true if ticks latency is half ticks.
 template<typename T, typename T2>
 void Component::AddInput(int inputIndex, void (T::*handler)(int, T2), T* obj, Clock* c,
-              bool isTimed=false, bool isHalf=false)
+              bool isTimed, bool isHalf)
 {
   // First insure the vector is large enough, add nulls if not
   while ((int)inLinks.size() <= inputIndex) inLinks.push_back(0);

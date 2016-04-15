@@ -92,9 +92,10 @@ private:
     pipeline_t *pipeline;
 };
 
+extern int QSIM_N_REGS;
 #define SPX_N_FLAGS 6
 #define SPX_N_FPREGS 8
-#define IS_IREG(i) ((i<QSIM_FP0)||(i>QSIM_FPSP))
+// #define IS_IREG(i) ((i<QSIM_FP0)||(i>QSIM_FPSP))
 
 class RF_t
 {
@@ -106,7 +107,9 @@ public:
     void writeback(inst_t *inst);
 
 private:
-    inst_t *regs[QSIM_N_REGS]; // regs table of latest producers of regs
+//    inst_t *regs[QSIM_N_REGS]; // regs table of latest producers of regs
+    std::vector<inst_t*> regs; // regs table of latest producers of regs
+
     inst_t *flags[SPX_N_FLAGS]; // flag table of latest producers of flags
     inst_t *fpregs[SPX_N_FPREGS]; // fpregs table of latest producers of fpregs
     int fpregs_stack_ptr;

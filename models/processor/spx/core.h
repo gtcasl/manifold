@@ -10,7 +10,6 @@
 #include "pipeline.h"
 #include "qsim-proxy.h"
 
-
 namespace manifold {
 namespace spx {
 

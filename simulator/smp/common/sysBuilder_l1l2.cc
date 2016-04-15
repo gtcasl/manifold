@@ -43,9 +43,10 @@ void SysBuilder_l1l2 :: config_components()
 	    // processor
 	    const char* proc_chars = m_config.lookup("processor.type");
 	    string proc_str = proc_chars;
-	    if(proc_str == "ZESTO") m_proc_builder = new Zesto_builder(this);
-	    else if (proc_str == "SIMPLE") m_proc_builder = new Simple_builder(this);
-        else if(proc_str == "SPX") m_proc_builder = new Spx_builder(this);
+   /*     if(proc_str == "ZESTO") m_proc_builder = new Zesto_builder(this);*/
+		//else if (proc_str == "SIMPLE") m_proc_builder = new Simple_builder(this);
+        //else if(proc_str == "SPX") m_proc_builder = new Spx_builder(this);
+        if (proc_str == "SPX") m_proc_builder = new Spx_builder(this);
         else {
 	        cerr << "Processor type  " << proc_str << "  not supported\n";
 		    exit(1);

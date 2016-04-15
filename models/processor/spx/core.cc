@@ -100,7 +100,7 @@ void spx_core_t::tick()
     pipeline->counter.undiff.switching++;
 #else
     // This will periodically print the stats to show the progress of simulation -- for debugging
-    // print_stats(100000, stdout);
+    print_stats(100000, stdout);
 #endif
 }
 
@@ -138,6 +138,9 @@ void spx_core_t::send_qsim_proxy_request()
     if(!qsim_proxy_request_sent) { /* Do not send multiple requests */
         qsim_proxy_request_sent = true;
         qsim_proxy_request_t *qsim_proxy_request = new qsim_proxy_request_t(core_id, getComponentId());
+#ifdef DEBUG_NEW_QSIM_1
+        std::cerr << "( Core " << std::dec << core_id << " ) [send request to qsim]" << std::endl << std::flush;
+#endif
         Send(OUT_TO_QSIM, qsim_proxy_request);
     }
 }

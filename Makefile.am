@@ -1,7 +1,7 @@
 MAINTAINERCLEANFILES= aclocal.m4 config.log config.status configure depcomp \
 		    Makefile.in INSTALL install-sh missing 
 
-SUBDIRS = kernel  uarch  models/cache/mcp-cache  models/cache/simple-cache  models/memory/CaffDRAM  models/memory/DRAMSim2  models/network/iris  models/processor/zesto  models/processor/simple-proc  models/processor/spx  models/cross/mcp_cache-iris  models/qsim/interrupt_handler  models/qsim/proxy
+SUBDIRS = kernel  uarch  models/cache/mcp-cache  models/cache/simple-cache  models/memory/CaffDRAM  models/memory/DRAMSim2  models/network/iris  models/processor/spx  models/cross/mcp_cache-iris  models/qsim/interrupt_handler  models/qsim/proxy
 #models/memory/simple-mc  
 #models/network/simple-net  
 
