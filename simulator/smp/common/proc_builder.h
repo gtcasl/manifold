@@ -195,7 +195,7 @@ public:
     void connect_proc_qsim_proxy(QsimBuilder* qsim_builder);
 
     void print_config(std::ostream&);
-    //void print_stats(std::ostream&);
+    void print_stats(std::ostream&);
 
 private:
     Qsim::OSDomain* m_qsim_osd;

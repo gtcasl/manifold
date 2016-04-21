@@ -36,8 +36,8 @@ public:
 	template<typename T>
 	void handle_request(int, uarch::NetworkPacket* pkt);
 
-        void print_config(std::ostream&);
-        void print_stats(std::ostream&);
+    void print_config(std::ostream&);
+    void print_stats(std::ostream&);
 
 	static void Set_msg_types(int mem, int credit)
 	{

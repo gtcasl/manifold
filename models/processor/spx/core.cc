@@ -128,6 +128,13 @@ void spx_core_t::reset_interval_stats()
     pipeline->stats.interval.uop_count = 0;
 }
 
+void spx_core_t::print_stats(std::ostream& out)
+{
+    out << "************ SPX Core " << core_id << " [node " << node_id << "] stats *************" << endl;
+    out << "  Total clock cycles: " << (double)clock_cycle/1e6 << "M" << endl;
+    out << "  avgIPC = " << (double)pipeline->stats.uop_count / (double) clock_cycle << endl; }
+
+
 void spx_core_t::handle_cache_response(int temp, cache_request_t *cache_request)
 {
     pipeline->handle_cache_response(temp,cache_request);
