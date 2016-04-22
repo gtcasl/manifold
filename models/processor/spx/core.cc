@@ -102,6 +102,11 @@ void spx_core_t::tick()
     // This will periodically print the stats to show the progress of simulation -- for debugging
     print_stats(100000, stdout);
 #endif
+
+    if (get_qsim_osd_state() == QSIM_OSD_TERMINATED) {
+        fprintf(stdout, "SPX core %d out of insn", core_id);
+        manifold::kernel::Manifold::Terminate(); 
+    }
 }
 
 void spx_core_t::print_stats(uint64_t sampling_period, FILE *LogFile)
