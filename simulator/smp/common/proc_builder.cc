@@ -565,3 +565,13 @@ void Spx_builder :: print_config(std::ostream& out)
     out << "  config file: " << m_CONFIG_FILE << endl;
 }
 
+void Spx_builder :: print_stats(std::ostream& out)
+{
+    for(map<int,int>::iterator it = m_proc_id_cid_map.begin(); it != m_proc_id_cid_map.end(); ++it) {
+        int cid = (*it).second;
+	    spx_core_t* proc = manifold::kernel::Component :: GetComponent<spx_core_t>(cid);
+	    if(proc) {
+	        proc->print_stats(out);
+	    }
+    }
+}

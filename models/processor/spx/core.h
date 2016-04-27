@@ -38,6 +38,9 @@ public:
     void turn_on();
     void turn_off();
 
+//    void print_config(std::ostream&);
+    void print_stats(std::ostream&);
+
     void send_qsim_proxy_request();
 
     int node_id; // manifold node ID

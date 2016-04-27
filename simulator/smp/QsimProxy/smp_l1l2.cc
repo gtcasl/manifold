@@ -80,13 +80,13 @@ int main(int argc, char** argv)
     Manifold::Run();
 
 
-    sysBuilder.print_stats();
+    sysBuilder.print_stats(cerr);
 
 
 #ifdef REDIRECT_COUT
     std::cout.rdbuf(cout_sbuf);
 #endif
 
-    Manifold :: Finalize();
+    Manifold::Finalize();
 }
 
