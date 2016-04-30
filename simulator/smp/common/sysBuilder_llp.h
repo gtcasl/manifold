@@ -40,7 +40,7 @@ public:
 
     void pre_simulation();
     void print_config(std::ostream& out);
-    void print_stats();
+    void print_stats(std::ostream& out);
 
     libconfig::Config m_config;
 

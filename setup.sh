@@ -18,12 +18,22 @@ if [  -z "$QSIM_PREFIX" ]; then
     echo "Press any key to exit..."
     read inp
     exit 1
+else
+    echo "\nUsing ${bold}qsim${normal} from dir ${bold}$QSIM_PREFIX${normal}"
+    echo "Press any key to continue..."
+    read inp
 fi
 
 # install manifold-dep packages
-echo "Installing dependencies ..."
-echo "sudo apt-get -y install build-essentail libconfig++-dev openmpi-bin openmpi-common libopenmpi-dev"
-sudo apt-get -y install build-essential libconfig++-dev openmpi-bin openmpi-common libopenmpi-dev
+if hash apt-get 2>/dev/null; then
+    echo "Installing dependencies ..."
+    echo "sudo apt-get -y install build-essentail libconfig++-dev openmpi-bin openmpi-common libopenmpi-dev"
+    sudo apt-get -y install build-essential libconfig++-dev openmpi-bin openmpi-common libopenmpi-dev
+else
+    echo "please refer to manifold manual for installation dependencies"
+    echo "Press any key to continue..."
+    read dump
+fi
 
 # Build manifold simulator
 echo "Building manifold components ..."
@@ -34,13 +44,11 @@ echo "Downloading the benchmark ..."
 cd ${MANIFOLD_DIR}/simulator/smp
 mkdir -p benchmark
 cd benchmark
-wget -c "https://www.dropbox.com/s/8551vnwhzqt9fk6/graphbig_x64.tar.gz?dl=0" -O graphbig_x64.tgz 
-wget -c "https://www.dropbox.com/s/rpxgwhyr41m2oa0/graphbig_a64.tar.gz?dl=0" -O graphbig_a64.tgz 
-wget -c "https://www.dropbox.com/s/jslv1g1v77ndq8m/splash-2.tar.gz?dl=0" -O splash_x86.tgz 
+wget -c "https://github.com/gtcasl/qsim_prebuilt/releases/download/v0.1/graphBig_x86.tar.xz" -O graphbig_x86.tar.xz 
+wget -c "https://github.com/gtcasl/qsim_prebuilt/releases/download/v0.1/graphBig_a64.tar.xz" -O graphbig_a64.tar.xz
 echo "Uncompressing the benchmark ..."
-tar -xzvf graphbig_a64.tgz
-tar -xzvf graphbig_x64.tgz
-tar -xzvf splash_x86.tgz
+tar -xf graphbig_x86.tar.xz
+tar -xf graphbig_a64.tar.xz
 cd ..
 
 if [ ! -f $QSIM_PREFIX/state.64 ]; then

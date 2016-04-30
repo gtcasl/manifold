@@ -664,13 +664,13 @@ void SysBuilder_llp :: print_config(ostream& out)
 
 //====================================================================
 //====================================================================
-void SysBuilder_llp :: print_stats()
+void SysBuilder_llp :: print_stats(ostream& out)
 {
-    m_proc_builder->print_stats(cout);
-    m_cache_builder->print_stats(cout);
-    m_mc_builder->print_stats(cout);
-    m_network_builder->print_stats(cout);
+    m_proc_builder->print_stats(out);
+    m_cache_builder->print_stats(out);
+    m_mc_builder->print_stats(out);
+    m_network_builder->print_stats(out);
 
-    Manifold :: print_stats(cout);
+    Manifold::print_stats(out);
 }
 
