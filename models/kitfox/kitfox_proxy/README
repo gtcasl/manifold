@@ -2,9 +2,9 @@
 
 File Tree:
 	HEADERS:
-		proxy.h
+		kitfox_proxy.h
 	SOURCES:
-		proxy.cc
+		kitfox_proxy.cc
 
 Description:
 
