@@ -11,7 +11,7 @@ spx_qsim_proxy_t::spx_qsim_proxy_t(pipeline_t *Pipeline) :
     pipeline(Pipeline)
 {
     /* Reserve fixed queue length. */
-    queue.reserve(SPX_QSIM_PROXY_QUEUE_SIZE);
+    queue.reserve(QSIM_PROXY_QUEUE_SIZE);
     queue.clear();
 }
 
@@ -25,10 +25,9 @@ void spx_qsim_proxy_t::handle_qsim_response(qsim_proxy_request_t *QsimProxyReque
 #ifdef DEBUG_NEW_QSIM_1
     std::cerr << "******************" << std::endl << std::flush;
     std::cerr << std::dec << pipeline->core->core_id << " recv: " << QsimProxyRequest->get_queue_size() << std::endl << std::flush;
+    std::vector<Qsim::QueueItem>::size_type sz = queue.size(); 
     //QsimProxyRequest->dump_queue();
 #endif
-
-    int sz = queue.size(); 
     QsimProxyRequest->append_to(queue);
 #ifdef DEBUG_NEW_QSIM_1
     std::cerr << "copied: " << queue.size() - sz << std::endl << std::flush;

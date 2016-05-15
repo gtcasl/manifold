@@ -6,8 +6,9 @@
 #include "kernel/component.h"
 #include "kernel/clock.h"
 
-#define QSIM_RUN_GRANULARITY   1000
-#define QSIM_PROXY_QUEUE_SIZE 5000
+#define QSIM_RUN_GRANULARITY   200
+#define QSIM_OVERHEAD   0.2
+#define QSIM_PROXY_QUEUE_SIZE (int)(5 * QSIM_RUN_GRANULARITY * (1 + QSIM_OVERHEAD))
 
 //#define DEBUG_NEW_QSIM 1 
 //#define DEBUG_NEW_QSIM_1 1 
@@ -97,7 +98,31 @@ void qsim_proxy_t::handle_core_request(int temp, T *CoreRequest)
 #ifdef DEBUG_NEW_QSIM
                 std::cerr << "( core: " << std::dec << core_id << " ) cbs: " << buffer.size() << " | " << std::flush;
 #endif
-                for(std::vector<Qsim::QueueItem>::iterator it = buffer.begin(); it != buffer.end(); it++) {
+                
+                std::vector<Qsim::QueueItem>::size_type sz = buffer.size();
+                std::vector<Qsim::QueueItem>::size_type offset = 0;
+                while ( sz > QSIM_PROXY_QUEUE_SIZE ) {
+                    T *req = new T(CoreRequest->get_core_id(), CoreRequest->get_port_id(), true);
+                    std::vector<Qsim::QueueItem>::iterator it = buffer.begin() + offset;
+
+                    for(int i = 0; i < QSIM_PROXY_QUEUE_SIZE; i++) {
+                        Qsim::QueueItem qi = *it;
+                        req->push_back(qi);
+                        it++;
+                    }
+
+#ifdef DEBUG_NEW_QSIM_1
+                    std::cerr << "( Core " << std::dec << req->get_core_id() << " ) [receive request from qsim*] | " << std::dec << req->get_queue_size() << std::endl << std::flush;
+#endif
+
+                    Send(req->get_port_id(), req);
+                    
+                    sz -= QSIM_PROXY_QUEUE_SIZE;
+                    offset += QSIM_PROXY_QUEUE_SIZE;
+                }
+
+                //assert( buffer.size() < QSIM_PROXY_QUEUE_SIZE );
+                for(std::vector<Qsim::QueueItem>::iterator it = buffer.begin() + offset; it != buffer.end(); it++) {
                     Qsim::QueueItem qi = *it;
                     CoreRequest->push_back(qi);
                 }

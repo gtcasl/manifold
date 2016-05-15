@@ -160,8 +160,10 @@ void spx_core_t::send_qsim_proxy_request()
 void spx_core_t::handle_qsim_response(int temp, qsim_proxy_request_t *qsim_proxy_request)
 {
     assert(qsim_proxy_request->get_core_id() == core_id);
-    assert(qsim_proxy_request_sent);
-    qsim_proxy_request_sent = false;
+    if (qsim_proxy_request->is_extended() == false) {
+        assert(qsim_proxy_request_sent);
+        qsim_proxy_request_sent = false;
+    }
 
     /* qsim_proxy_request is deleted here */
     qsim_proxy->handle_qsim_response(qsim_proxy_request);
