@@ -21,6 +21,7 @@ AC_CONFIG_SUBDIRS([kernel
                    models/cross/mcp_cache-iris
                    models/qsim/interrupt_handler
                    models/qsim/proxy
+                   models/kitfox/kitfox_proxy
 		   ])
 
 #models/memory/simple-mc 

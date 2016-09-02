@@ -61,7 +61,7 @@ fi
 AC_SUBST([KERNEL_INC], [$KERINC])
 
 
-# use QSim by default
+# use Kitfox by default
 AC_ARG_WITH([kitfox],
     [AS_HELP_STRING([--without-kitfox],
         [do not use QSim @<:@default: no@:>@])],
@@ -88,7 +88,7 @@ if test "x${kitfox}" = xyes ; then
 else # use_kitfox disabled
     AC_MSG_WARN([
     -----------------------------------------------------------------
-    USE_KITFOX disabled! Building only processor models not using QSim.
+    USE_KITFOX disabled! Building only processor models not using KitFox.
     -----------------------------------------------------------------])
 fi
 

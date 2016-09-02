@@ -37,7 +37,17 @@ fi
 
 # Build manifold simulator
 echo "Building manifold components ..."
-./configure QSIMINC=${QSIM_PREFIX}/include
+if [  -z "$KITFOX_PREFIX" ]; then
+    echo "\n${bold}kitfox library${normal} disabled "
+    echo "Press any key to continue..."
+    read inp
+    ./configure QSIMINC=${QSIM_PREFIX}/include --without-kitfox
+else
+    echo "\nUsing ${bold}kitfox${normal} from dir ${bold}$KITFOX_PREFIX${normal}"
+    echo "Press any key to continue..."
+    read inp
+    ./configure QSIMINC=${QSIM_PREFIX}/include KITFOXINC=${KITFOX_PREFIX}
+fi
 make -j4 
 
 echo "Downloading the benchmark ..."
