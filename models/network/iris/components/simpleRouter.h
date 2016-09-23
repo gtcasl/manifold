@@ -126,7 +126,7 @@ class SimpleRouter : public manifold::kernel::Component
     public:
 unsigned npred;
 unsigned tpred;
-        enum { PORT_NI=0, PORT_WEST, PORT_EAST, PORT_NORTH, PORT_SOUTH };
+        enum { PORT_NI=0, PORT_WEST, PORT_EAST, PORT_NORTH, PORT_SOUTH, PORT_MC };
 
 
         /* ====================  LIFECYCLE     ======================================= */

@@ -17,7 +17,7 @@ public:
 
     enum {PORT_LOCAL_L2=2};
 
-    enum {LLP_ID=234, LLS_ID};
+//    enum {LLP_ID=234, LLS_ID};
 
     LLP_cache (int nid, const cache_settings&, const L1_cache_settings&);
     virtual ~LLP_cache (void);

@@ -704,8 +704,6 @@ GenNetworkInterface<T>::to_flit_level_packet(FlitLevelPacket* flp, T* pkt, manif
     //ensure the actual packet fits in the number of flits allocated.
     assert((int)(sizeof(T)/num_flits) <= HeadFlit :: MAX_DATA_SIZE);
 
-
-
     //generate the flit level packet
     unsigned tot_flits = num_flits;
     if(num_flits > 1)
@@ -729,6 +727,17 @@ GenNetworkInterface<T>::to_flit_level_packet(FlitLevelPacket* flp, T* pkt, manif
     else {
 	assert(vnet->get_virtual_net(pkt) == 1);
         hf->mclass = MC_RESP;
+    }
+
+    //cout << "pkt type: " << pkt->get_type() << ", dst: " << pkt->get_dst() << " port: " << pkt->get_dst_port() << ", src: " << pkt->get_src() << " port: " << pkt->get_src_port() << ", src id: " << hf->src_id << ", dst id: " << hf->dst_id << endl;
+
+    if (pkt->get_dst_port() == manifold::uarch::LLP_ID || pkt->get_dst_port() == manifold::uarch::LLS_ID ) { //LLP::LLP_ID, LLP::LLS_ID
+        hf->term = CACHE;
+    } else if (pkt->get_type() == 456) { //m_MEM_MSG_TYPE
+        hf->term = MEMORY;
+    } else {
+        cout << "Invalid terminal distination" << endl;
+        exit(1);
     }
 
     //copy data to head flit
@@ -986,7 +995,7 @@ void GenNetworkInterface<T> :: do_output_to_terminal_prediction()
 	    }
 
 	    when = ticks[0];
-	    for(int i=1; i<no_vcs; i++) {
+	    for(unsigned int i=1; i<no_vcs; i++) {
 	        if(ticks[i] < when)
 		    when = ticks[i];
 	    }

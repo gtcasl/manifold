@@ -18,6 +18,7 @@
 #include "ring.h"
 #include "torus.h"
 #include "CrossBar.h"
+#include "torus6p.h"
 
 /* *********** the class topology creator start here ************ */
 namespace manifold {
@@ -35,6 +36,7 @@ public:
     static Ring<T>* create_ring(manifold::kernel::Clock& clk, ring_init_params* params, const Terminal_to_net_mapping*, SimulatedLen<T>*, VnetAssign<T>*, int ni_credit_type, uint lp_inf, uint lp_rt);
     static Torus<T>* create_torus(manifold::kernel::Clock& clk, torus_init_params* params, const Terminal_to_net_mapping*, SimulatedLen<T>*, VnetAssign<T>*, int ni_credit_type, vector<int>* node_lp); 
     static CrossBar<T>* create_CrossBar(manifold::kernel::Clock& clk, const CrossBar_init_params* params, const Terminal_to_net_mapping*, SimulatedLen<T>*, uint lp_inf, uint lp_rt);    
+    static Torus6p<T>* create_torus6p(manifold::kernel::Clock& clk, torus6p_init_params* params, const Terminal_to_net_mapping*, SimulatedLen<T>*, VnetAssign<T>*, int ni_credit_type, vector<int>* node_lp); 
  
 #ifndef IRIS_TEST
     private:
@@ -82,6 +84,17 @@ Torus<T>* topoCreator<T>::create_torus(manifold::kernel::Clock& clk, torus_init_
     
     //call torus constructor to creat the ting network
     tp = new manifold::iris::Torus<T>(clk, params, mapping, simLen, vn, ni_credit_type, node_lp);
+    
+    return tp;  
+}
+
+template<typename T>
+Torus6p<T>* topoCreator<T>::create_torus6p(manifold::kernel::Clock& clk, torus6p_init_params* params, const Terminal_to_net_mapping* mapping, SimulatedLen<T>* simLen, VnetAssign<T>* vn, int ni_credit_type, vector<int>* node_lp)
+{
+    Torus6p<T>* tp = 0;
+    
+    //call torus constructor to creat the ting network
+    tp = new manifold::iris::Torus6p<T>(clk, params, mapping, simLen, vn, ni_credit_type, node_lp);
     
     return tp;  
 }

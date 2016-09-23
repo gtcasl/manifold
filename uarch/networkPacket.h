@@ -4,6 +4,7 @@
 namespace manifold {
 namespace uarch {
 
+enum {LLP_ID=234, LLS_ID};
 
 class NetworkPacket {
 public:

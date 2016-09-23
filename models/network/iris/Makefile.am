@@ -58,7 +58,8 @@ pkginclude_iris_genericTopology_HEADERS = \
             genericTopology/CrossBar.h \
             genericTopology/genericTopoCreator.h \
 	    genericTopology/ring.h \
-	    genericTopology/torus.h
+	    genericTopology/torus.h \
+	    genericTopology/torus6p.h
 
 ###libIris
 libiris_a_CPPFLAGS = -I. -I$(KERNEL_INC)

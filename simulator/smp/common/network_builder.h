@@ -69,11 +69,13 @@ private:
     int m_y_dimension;
     manifold::iris::ring_init_params ring_params;
     manifold::iris::torus_init_params torus_params;
+    manifold::iris::torus6p_init_params torus6p_params;
     //int COH_MSG_TYPE;
     //int MEM_MSG_TYPE;
     int CREDIT_MSG_TYPE;
     manifold::iris::Ring<manifold::uarch::NetworkPacket>* m_ring;
     manifold::iris::Torus<manifold::uarch::NetworkPacket>* m_torus;
+    manifold::iris::Torus6p<manifold::uarch::NetworkPacket>* m_torus6p;
     manifold::iris::SimulatedLen<manifold::uarch::NetworkPacket>* m_simLen;
     manifold::iris::VnetAssign<manifold::uarch::NetworkPacket>* m_vnet;
     bool m_default_simLen;

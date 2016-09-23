@@ -28,6 +28,7 @@ namespace iris {
 
 
 enum flit_type {UNK, HEAD, BODY, TAIL };
+enum term_type {CACHE, MEMORY };
 
 /*
  * =====================================================================================
@@ -105,6 +106,8 @@ class HeadFlit: public Flit
 
         uint8_t data[MAX_DATA_SIZE]; //support single-flit packets
 	int data_len;
+
+        term_type term;
 
         uint64_t enter_network_time;
 };
