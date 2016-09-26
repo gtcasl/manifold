@@ -491,6 +491,7 @@ void L2_cache::get_from_memory (Coh_msg *request)
     pkt->type = MEM_MSG;
     pkt->src = node_id;
     pkt->dst = req.dst_id;
+    pkt->dst_port = manifold::uarch::MEM_ID;
     *((Mem_msg*)(pkt->data)) = req;
     pkt->data_size = sizeof(Mem_msg);
 
@@ -523,6 +524,7 @@ void L2_cache::dirty_to_memory (paddr_t addr)
     pkt->type = MEM_MSG;
     pkt->src = node_id;
     pkt->dst = req.dst_id;
+    pkt->dst_port = manifold::uarch::MEM_ID;
     *((Mem_msg*)(pkt->data)) = req;
     pkt->data_size = sizeof(Mem_msg);
 

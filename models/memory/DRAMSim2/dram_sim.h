@@ -154,6 +154,7 @@ cout << "@ " << m_clk->NowTicks() << " >>> mc " << m_nid << " received ST, src= 
     pkt->set_dst_port(pkt->get_src_port());
     pkt->set_src(m_nid);
     pkt->set_src_port(0);
+    pkt->type = 9;
 	
     //put the request in the input buffer
     m_incoming_reqs.push_back(Request(m_clk->NowTicks(), req->get_addr(), req->is_read(), pkt));

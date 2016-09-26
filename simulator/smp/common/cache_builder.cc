@@ -111,11 +111,34 @@ void MCP_lp_lls_builder :: connect_cache_network(NetworkBuilder* net_builder)
 		const std::vector<CompId_t>& ni_cids = net_builder->get_interface_cid();
 		for(map<int, LP_LLS_unit*>::iterator it = m_caches.begin(); it != m_caches.end(); ++it) {
 		    int node_id = (*it).first;
-		    assert(node_id >= 0 && node_id < int(ni_cids.size()) );
 		    LP_LLS_unit* unit = (*it).second;
 		    int cache_cid = unit->get_mux_cid();
-		    //????????????????????????? todo: use proper clock!!
-		    switch(m_sysBuilder->get_mc_builder()->get_type()) {
+                    if (irisBuilder->get_topology() == "TORUS6P")
+                    {
+		      assert(node_id >= 0 && node_id < int(ni_cids.size())/2 );
+		      //????????????????????????? todo: use proper clock!!
+		      switch(m_sysBuilder->get_mc_builder()->get_type()) {
+		        case MemControllerBuilder::CAFFDRAM:
+			    Manifold :: Connect(cache_cid, MuxDemux::PORT_NET, &MuxDemux::handle_net<manifold::mcp_cache_namespace::Mem_msg>,
+						ni_cids[node_id*2], GenNetworkInterface<NetworkPacket>::TERMINAL_PORT,
+						&GenNetworkInterface<NetworkPacket>::handle_new_packet_event, Clock::Master(), Clock::Master(), 1, 1);
+			    break;
+		        case MemControllerBuilder::DRAMSIM:
+                       //     cout << node_id << " " << ni_cids[node_id] << endl;
+			    Manifold :: Connect(cache_cid, MuxDemux::PORT_NET, &MuxDemux::handle_net<manifold::uarch::Mem_msg>,
+						ni_cids[node_id*2], GenNetworkInterface<NetworkPacket>::TERMINAL_PORT,
+						&GenNetworkInterface<NetworkPacket>::handle_new_packet_event, Clock::Master(), Clock::Master(), 1, 1);
+			    break;
+			default:
+			    assert(0);
+			    break;
+                      }
+		    }
+                    else
+                    {
+		      assert(node_id >= 0 && node_id < int(ni_cids.size()) );
+		      //????????????????????????? todo: use proper clock!!
+		      switch(m_sysBuilder->get_mc_builder()->get_type()) {
 		        case MemControllerBuilder::CAFFDRAM:
 			    Manifold :: Connect(cache_cid, MuxDemux::PORT_NET, &MuxDemux::handle_net<manifold::mcp_cache_namespace::Mem_msg>,
 						ni_cids[node_id], GenNetworkInterface<NetworkPacket>::TERMINAL_PORT,
@@ -129,7 +152,8 @@ void MCP_lp_lls_builder :: connect_cache_network(NetworkBuilder* net_builder)
 			default:
 			    assert(0);
 			    break;
-		    }
+		      }
+                    }
 		}
 	    }
 	    break;

@@ -71,11 +71,29 @@ void CaffDRAM_builder :: connect_mc_network(NetworkBuilder* net_builder)
 		const std::vector<CompId_t>& ni_cids = net_builder->get_interface_cid();
 		for(map<int, int>::iterator it = m_mc_id_cid_map.begin(); it != m_mc_id_cid_map.end(); ++it) {
 		    int node_id = (*it).first;
-		    assert(node_id >= 0 && node_id < int(ni_cids.size()) );
 		    int mc_cid = (*it).second;
-		    //????????????????????????? todo: use proper clock!!
-		    //???????????????????????? todo: Mem_msg is MCP-cache
-		    switch(m_sysBuilder->get_cache_builder()->get_type()) {
+                    if (irisBuilder->get_topology() == "TORUS6P")
+                    {
+		      assert(node_id >= 0 && node_id < int(ni_cids.size())/2 );
+		      //????????????????????????? todo: use proper clock!!
+		      //???????????????????????? todo: Mem_msg is MCP-cache
+		      switch(m_sysBuilder->get_cache_builder()->get_type()) {
+		        case CacheBuilder::MCP_CACHE:
+		        case CacheBuilder::MCP_L1L2:
+			    Manifold :: Connect(mc_cid, Controller::PORT0, &Controller::handle_request<manifold::mcp_cache_namespace::Mem_msg>,
+						ni_cids[node_id*2+1], GenNetworkInterface<NetworkPacket>::TERMINAL_PORT,
+						&GenNetworkInterface<NetworkPacket>::handle_new_packet_event, Clock::Master(), Clock::Master(), 1, 1);
+			    break;
+			default:
+			    assert(0);
+                      }
+		    }
+                    else
+                    {
+		      assert(node_id >= 0 && node_id < int(ni_cids.size()) );
+		      //????????????????????????? todo: use proper clock!!
+		      //???????????????????????? todo: Mem_msg is MCP-cache
+		      switch(m_sysBuilder->get_cache_builder()->get_type()) {
 		        case CacheBuilder::MCP_CACHE:
 		        case CacheBuilder::MCP_L1L2:
 			    Manifold :: Connect(mc_cid, Controller::PORT0, &Controller::handle_request<manifold::mcp_cache_namespace::Mem_msg>,
@@ -84,6 +102,7 @@ void CaffDRAM_builder :: connect_mc_network(NetworkBuilder* net_builder)
 			    break;
 			default:
 			    assert(0);
+                      }
 		    }
 
 
@@ -214,10 +233,31 @@ void DramSim_builder :: connect_mc_network(NetworkBuilder* net_builder)
 		const std::vector<CompId_t>& ni_cids = net_builder->get_interface_cid();
 		for(map<int, int>::iterator it = m_mc_id_cid_map.begin(); it != m_mc_id_cid_map.end(); ++it) {
 		    int node_id = (*it).first;
-		    assert(node_id >= 0 && node_id < int(ni_cids.size()) );
 		    int mc_cid = (*it).second;
 		    Dram_sim* dram_sim = Component :: GetComponent<Dram_sim>(mc_cid);
-		    if(dram_sim) { //no need to call Connect if MC is not in this LP
+                    if (irisBuilder->get_topology() == "TORUS6P")
+                    {
+		      assert(node_id >= 0 && node_id < int(ni_cids.size())/2 );
+		      if(dram_sim) { //no need to call Connect if MC is not in this LP
+			//????????????????????????? todo: MCP use proper clock!!
+			switch(m_sysBuilder->get_cache_builder()->get_type()) {
+			    case CacheBuilder::MCP_CACHE:
+			    case CacheBuilder::MCP_L1L2:
+				Manifold :: Connect(mc_cid, Controller::PORT0,
+				                    &Dram_sim::handle_incoming<manifold::mcp_cache_namespace::Mem_msg>,
+						    ni_cids[node_id*2+1], GenNetworkInterface<NetworkPacket>::TERMINAL_PORT,
+						    &GenNetworkInterface<NetworkPacket>::handle_new_packet_event,
+						    *(dram_sim->get_clock()), Clock::Master(), 1, 1);
+				break;
+			    default:
+				assert(0);
+			}
+                      }
+		    }
+                    else
+                    {
+		      assert(node_id >= 0 && node_id < int(ni_cids.size()) );
+		      if(dram_sim) { //no need to call Connect if MC is not in this LP
 			//????????????????????????? todo: MCP use proper clock!!
 			switch(m_sysBuilder->get_cache_builder()->get_type()) {
 			    case CacheBuilder::MCP_CACHE:
@@ -231,7 +271,8 @@ void DramSim_builder :: connect_mc_network(NetworkBuilder* net_builder)
 			    default:
 				assert(0);
 			}
-		    }
+		      }
+                    }
 
 		}//for
 	    }

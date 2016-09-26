@@ -729,7 +729,7 @@ GenNetworkInterface<T>::to_flit_level_packet(FlitLevelPacket* flp, T* pkt, manif
         hf->mclass = MC_RESP;
     }
 
-    //cout << "pkt type: " << pkt->get_type() << ", dst: " << pkt->get_dst() << " port: " << pkt->get_dst_port() << ", src: " << pkt->get_src() << " port: " << pkt->get_src_port() << ", src id: " << hf->src_id << ", dst id: " << hf->dst_id << endl;
+ //   cout << "pkt type: " << pkt->get_type() << ", dst: " << pkt->get_dst() << " port: " << pkt->get_dst_port() << ", src: " << pkt->get_src() << " port: " << pkt->get_src_port() << ", src id: " << hf->src_id << ", dst id: " << hf->dst_id << endl;
 
     if (pkt->get_dst_port() == manifold::uarch::LLP_ID || pkt->get_dst_port() == manifold::uarch::LLS_ID ) { //LLP::LLP_ID, LLP::LLS_ID
         hf->term = CACHE;

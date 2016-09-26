@@ -52,6 +52,7 @@ public:
     int get_max_nodes() { return m_x_dimension * m_y_dimension; }
     int get_x_dim() { return m_x_dimension; }
     int get_y_dim() { return m_y_dimension; }
+    std::string get_topology() { return m_net_topo; } 
 
     void dep_injection(manifold::iris::SimulatedLen<manifold::uarch::NetworkPacket>* simLen,
                        manifold::iris::VnetAssign<manifold::uarch::NetworkPacket>* vnet);

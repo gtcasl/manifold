@@ -15,7 +15,7 @@
 #include "qsim.h"
 
 // this data structure to hold a node's type and lp
-enum {INVALID_NODE=0, EMPTY_NODE, CORE_NODE, MC_NODE, L2_NODE};
+enum {INVALID_NODE=0, EMPTY_NODE, CORE_NODE, MC_NODE, CORE_MC_NODE, L2_NODE};
 
 struct Node_conf_llp {
     Node_conf_llp() : type(INVALID_NODE) {}

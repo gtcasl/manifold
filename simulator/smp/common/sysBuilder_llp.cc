@@ -148,7 +148,7 @@ void SysBuilder_llp :: config_components()
 	    //the node indices of processors are in an array, each value between 0 and MAX_NODES-1
 	    Setting& setting_proc = m_config.lookup("processor.node_idx");
 	    int num_proc = setting_proc.getLength(); //number of processors
-	    assert(num_proc >=1 && num_proc < MAX_NODES);
+	    assert(num_proc >=1 && num_proc <= MAX_NODES);
 
 	    this->proc_node_idx_vec.resize(num_proc);
 
@@ -164,7 +164,7 @@ void SysBuilder_llp :: config_components()
 	    //the node indices of MC are in an array, each value between 0 and MAX_NODES-1
 	    Setting& setting_mc = m_config.lookup("mc.node_idx");
 	    int num_mc = setting_mc.getLength(); //number of mem controllers
-	    assert(num_mc >=1 && num_mc < MAX_NODES);
+	    assert(num_mc >=1 && num_mc <= MAX_NODES);
 
 	    this->mc_node_idx_vec.resize(num_mc);
 
@@ -175,11 +175,11 @@ void SysBuilder_llp :: config_components()
 	    }
 	    assert(mc_node_idx_set.size() == (unsigned)num_mc); //verify no 2 indices are the same
 
-	    //verify MC indices are not used by processors
-	    for(int i=0; i<num_mc; i++) {
-	        for(int j=0; j<num_proc; j++)
-	            assert(this->mc_node_idx_vec[i] != this->proc_node_idx_vec[j]);
-	    }
+//	    //verify MC indices are not used by processors
+//	    for(int i=0; i<num_mc; i++) {
+//	        for(int j=0; j<num_proc; j++)
+//	            assert(this->mc_node_idx_vec[i] != this->proc_node_idx_vec[j]);
+//	    }
     }
     catch (SettingNotFoundException e) {
 	    cout << e.getPath() << " not set." << endl;
@@ -389,25 +389,6 @@ void SysBuilder_llp :: create_qsimproxy_nodes(vector<string>& args, const char* 
     m_qsim_builder->create_qsim(0);
 
     switch(m_proc_builder->get_proc_type()) {
-	   /* case ProcBuilder::PROC_ZESTO: {*/
-			//if(args.size() != 0) {
-				//cerr << "Zesto core needs:  [no arguments]\n";
-				//exit(1);
-			//}
-			//Zesto_builder* z = dynamic_cast<Zesto_builder*>(m_proc_builder);
-			//assert(z);
-			//break;
-        //}
-		//case ProcBuilder::PROC_SIMPLE: {
-			//if(args.size() != 0) {
-				//cerr << "SimpleProc core needs:  [no arguments]\n";
-				//exit(1);
-			//}
-			//Simple_builder* s = dynamic_cast<Simple_builder*>(m_proc_builder);
-			//assert(s);
-			//break;
-       /* }*/
-        
 	    case ProcBuilder::PROC_SPX: {
 		    if(args.size() != 0) {
 		        cerr << "SPX core needs:  [no arguments]\n";
@@ -514,6 +495,7 @@ void SysBuilder_llp :: do_partitioning_1_part(int n_lps)
 {
     int lp_idx = 1; //the network is LP 0
     for(int i=0; i<MAX_NODES; i++) {
+        bool flag = false;
         if(n_lps == 1)
             lp_idx = 0;
         else if(n_lps == 2)
@@ -523,15 +505,22 @@ void SysBuilder_llp :: do_partitioning_1_part(int n_lps)
             m_node_conf[i].type = MC_NODE;
             m_node_conf[i].lp = 0;
 	        mc_id_lp_map[i] = m_node_conf[i].lp;
+                flag = true;
         }
-        else if(proc_node_idx_set.find(i) != proc_node_idx_set.end()) {
+        if(proc_node_idx_set.find(i) != proc_node_idx_set.end()) {
+          if (mc_node_idx_set.find(i) != mc_node_idx_set.end()) {
+              m_node_conf[i].type = CORE_MC_NODE;
+          }
+          else {
             m_node_conf[i].type = CORE_NODE;
+          }
             if(n_lps < 3) m_node_conf[i].lp = lp_idx;
             else m_node_conf[i].lp = lp_idx%(n_lps-1)+1;
 	        proc_id_lp_map[i] = m_node_conf[i].lp;
             lp_idx++;
+            flag = true;
         }
-        else { m_node_conf[i].type = EMPTY_NODE; }
+        if (!flag) { m_node_conf[i].type = EMPTY_NODE; }
     }
 }
 
@@ -547,19 +536,27 @@ void SysBuilder_llp :: do_partitioning_y_part(int n_lps)
 
     int lp_idx = y_dim; //the network is LP 0 -- y_dim-1
     for(int i=0; i<MAX_NODES; i++) {
+        bool flag = false;
         if(mc_node_idx_set.find(i) != mc_node_idx_set.end()) { //MC node
             m_node_conf[i].type = MC_NODE;
 	        m_node_conf[i].lp = i/x_dim;
 	        mc_id_lp_map[i] = m_node_conf[i].lp;
+                flag = true;
         }
-        else if(proc_node_idx_set.find(i) != proc_node_idx_set.end()) {
+        if(proc_node_idx_set.find(i) != proc_node_idx_set.end()) {
+          if (mc_node_idx_set.find(i) != mc_node_idx_set.end()) {
+              m_node_conf[i].type = CORE_MC_NODE;
+          }
+          else {
             m_node_conf[i].type = CORE_NODE;
+          }
             if(n_lps < 3) m_node_conf[i].lp = lp_idx;
             else m_node_conf[i].lp = lp_idx%(n_lps-1)+1;
 	        proc_id_lp_map[i] = m_node_conf[i].lp;
             lp_idx++;
+            flag = true;
         }
-        else { m_node_conf[i].type = EMPTY_NODE; }
+        if (!flag) { m_node_conf[i].type = EMPTY_NODE; }
     }
 }
 
@@ -635,6 +632,8 @@ void SysBuilder_llp :: print_config(ostream& out)
 	    out << "  core node";
 	else if(m_node_conf[i].type == MC_NODE)
 	    out << "  mc node";
+	else if(m_node_conf[i].type == CORE_MC_NODE)
+	    out << "  core and mc node";
 	else if(m_node_conf[i].type == L2_NODE)
 	    out << "  l2 node";
 	else
