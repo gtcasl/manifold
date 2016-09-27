@@ -31,7 +31,8 @@ struct Dram_sim_settings {
     int size;			        // Memory size in MB
     //unsigned local_map;	                // Type of local address mapping
     bool send_st_resp;                  // whether responses are sent for stores
-    int downstream_credits;             
+    int downstream_credits;            
+    manifold::uarch::DestMap* mc_map;
 };
 
 

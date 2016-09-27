@@ -20,6 +20,7 @@ namespace mcp_cache_namespace {
 struct L2_cache_settings {
 public:
     manifold::uarch::DestMap* mc_map;
+    manifold::uarch::DestMap* l2_map;
     unsigned mshr_sz; //mshr size
     int downstream_credits;
 };
