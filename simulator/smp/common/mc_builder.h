@@ -27,6 +27,7 @@ public:
     virtual void connect_mc_network(NetworkBuilder*) = 0;
     virtual void print_config(std::ostream&);
     virtual void print_stats(std::ostream&) = 0;
+    virtual void set_mc_map_obj(manifold::uarch::DestMap *mc_map) = 0;
 
 protected:
     SysBuilder_llp* m_sysBuilder;
@@ -51,6 +52,7 @@ public:
     void read_config(libconfig::Config&);
     void create_mcs(std::map<int, int>& id_lp);
     void connect_mc_network(NetworkBuilder*);
+    void set_mc_map_obj(manifold::uarch::DestMap *mc_map);
 
     manifold::caffdram::Dsettings& get_settings() { return m_dram_settings; }
 
@@ -76,6 +78,7 @@ public:
     void read_config(libconfig::Config&);
     void create_mcs(std::map<int, int>& id_lp);
     void connect_mc_network(NetworkBuilder*);
+    void set_mc_map_obj(manifold::uarch::DestMap *mc_map);
 
     void print_config(std::ostream&);
     void print_stats(std::ostream&);

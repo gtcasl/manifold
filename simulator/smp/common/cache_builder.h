@@ -21,6 +21,7 @@ public:
     virtual void create_caches(manifold::kernel::Clock& clk) = 0;
     virtual void connect_cache_network(NetworkBuilder*) = 0;
     virtual int get_type() = 0;
+    virtual void set_mc_map_obj(manifold::uarch::DestMap *mc_map) = 0;
 
     virtual void pre_simulation() {};
     virtual void print_config(std::ostream&) {}
@@ -36,14 +37,10 @@ class MCP_cache_builder : public CacheBuilder {
 public:
     MCP_cache_builder(SysBuilder_llp* b) : CacheBuilder(b)
     {
-        l1_settings.l2_map = 0;
-        l2_settings.mc_map = 0;
     }
 
     unsigned get_l1_block_size() { return l2_cache_parameters.block_size; }
     unsigned get_l2_block_size() { return l2_cache_parameters.block_size; }
-
-    void set_mc_map_obj(manifold::uarch::DestMap* mc_map);
 
     int get_coh_type() { return m_COH_MSG_TYPE; }
     int get_mem_type() { return m_MEM_MSG_TYPE; }
@@ -64,20 +61,18 @@ protected:
 
 class MCP_lp_lls_builder : public MCP_cache_builder {
 public:
-    MCP_lp_lls_builder(SysBuilder_llp* b) : MCP_cache_builder(b)
-    {
-    }
+  MCP_lp_lls_builder(SysBuilder_llp *b) : MCP_cache_builder(b) {}
 
-    void read_cache_config(libconfig::Config& config);
-    void create_caches(manifold::kernel::Clock& clk);
-    void connect_cache_network(NetworkBuilder*);
+  void read_cache_config(libconfig::Config &config);
+  void create_caches(manifold::kernel::Clock &clk);
+  void connect_cache_network(NetworkBuilder *);
 
+  void set_mc_map_obj(manifold::uarch::DestMap *mc_map);
 
-    int get_type() { return MCP_CACHE; }
+  int get_type() { return MCP_CACHE; }
 
-
-    std::map<int, manifold::mcp_cache_namespace::LP_LLS_unit*>& get_cache_map() { return m_caches; }
-
+  std::map<int, manifold::mcp_cache_namespace::LP_LLS_unit *> &get_cache_map() {
+    return m_caches; }
 
     void pre_simulation();
 
@@ -99,6 +94,8 @@ public:
     void read_cache_config(libconfig::Config& config);
     void create_caches(manifold::kernel::Clock& clk);
     void connect_cache_network(NetworkBuilder*);
+
+    void set_mc_map_obj(manifold::uarch::DestMap* mc_map);
 
     int get_type() { return MCP_L1L2; }
 

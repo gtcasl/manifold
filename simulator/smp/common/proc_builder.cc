@@ -494,6 +494,22 @@ void Spx_builder :: create_trace_procs(std::map<int,int>& id_lp)
     exit(1);
 }
 
+#ifdef LIBKITFOX
+void Spx_builder :: connect_proc_kitfox_proxy(KitFoxBuilder* kitfox_builder)
+{
+    int kitfox_cid = kitfox_builder->get_component_id();
+
+    for(map<int,int>::iterator it = m_proc_id_cid_map.begin(); it != m_proc_id_cid_map.end(); ++it) {
+        int proc_cid = (*it).second;
+
+        //connect proc with qsim proxy
+        Manifold :: Connect(proc_cid, spx_core_t::OUT_TO_QSIM, &spx_core_t::handle_qsim_response,
+                            qsim_cid, proc_cid, &qsim_proxy_t::handle_core_request<manifold::spx::qsim_proxy_request_t>,
+                            Clock::Master(), Clock::Master(), 1, 1);
+    }
+}
+#endif
+
 void Spx_builder :: connect_proc_qsim_proxy(QsimBuilder* qsim_builder)
 {
     int qsim_cid = qsim_builder->get_component_id();
