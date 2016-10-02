@@ -51,4 +51,4 @@ pkginclude_DRAMSim2proper_HEADERS = \
 	SystemConfiguration.h \
 	Transaction.h
 
-libDRAMSim2proper_a_CPPFLAGS = -DNO_STORAGE -Wall -DDEBUG_BUILD -DLOG_OUTPUT
+libDRAMSim2proper_a_CPPFLAGS = -DNO_STORAGE -Wall -DLOG_OUTPUT

@@ -610,6 +610,7 @@ void SimpleRouter::print_stats (ostream& out ) const
 
 
 
+#ifdef IRIS_DBG
 std::string InputBufferState :: toString()
 {
     stringstream str;
@@ -653,7 +654,7 @@ void SimpleRouter :: dump_input_vc_state()
     }
 
 }
-
+#endif
 
 
 //record the ports that connected to another router that at different lp

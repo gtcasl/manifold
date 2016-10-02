@@ -292,7 +292,7 @@ void MultiChannelMemorySystem::InitOutputFiles(string traceFilename)
 		// cerr << "vis file output disabled\n";
 	}
 #ifdef LOG_OUTPUT
-	string dramsimLogFilename("dramsim");
+	string dramsimLogFilename("dramsim_results/dramsim");
 	if (sim_description != NULL)
 	{
 		dramsimLogFilename += "."+sim_description_str; 
