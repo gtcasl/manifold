@@ -50,7 +50,7 @@ private:
     int m_x_dimension;
     int m_y_dimension;
     manifold::iris::torus6p_init_params torus6p_params;
-    manifold::iris::hmcNet<manifold::uarch::NetworkPacket>* m_torus;
+    manifold::iris::Torus6p<manifold::uarch::NetworkPacket>* m_torus;
     manifold::iris::SimulatedLen<manifold::uarch::NetworkPacket>* m_simLen;
     manifold::iris::VnetAssign<manifold::uarch::NetworkPacket>* m_vnet;
     bool m_default_simLen;

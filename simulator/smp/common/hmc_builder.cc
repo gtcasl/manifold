@@ -154,7 +154,7 @@ void hmc_builder :: create_mcs(map<int, int>& id_lp)
     }
 
     //    if(this->m_net_topo == "TORUS6P") {
-    m_torus = topoCreator<NetworkPacket>::create_hmcnet((clock[0]), &(this->torus6p_params), mapping, (SimulatedLen<NetworkPacket>*)m_simLen, (VnetAssign<NetworkPacket>*)m_vnet, this->m_CREDIT_MSG_TYPE, &node_lp); //network on LP 0
+    m_torus = topoCreator<NetworkPacket>::create_torus6p((clock[0]), &(this->torus6p_params), mapping, (SimulatedLen<NetworkPacket>*)m_simLen, (VnetAssign<NetworkPacket>*)m_vnet, this->m_CREDIT_MSG_TYPE, &node_lp); //network on LP 0
     const std::vector<CompId_t>& ni_cids = m_torus->get_interface_id();
     
     for(map<int, int>::iterator it = m_mc_id_cid_map.begin(); it != m_mc_id_cid_map.end(); ++it) {
