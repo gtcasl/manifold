@@ -14,7 +14,7 @@ class NetworkBuilder;
 
 class MemControllerBuilder {
 public:
-    enum {CAFFDRAM, DRAMSIM}; //mc types
+    enum {CAFFDRAM, DRAMSIM, HMC}; //mc types
 
     MemControllerBuilder(SysBuilder_llp* b) : m_sysBuilder(b) {}
 

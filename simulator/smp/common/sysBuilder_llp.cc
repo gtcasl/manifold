@@ -108,7 +108,7 @@ void SysBuilder_llp :: config_components()
    /*     if(proc_str == "ZESTO") m_proc_builder = new Zesto_builder(this);*/
 		//else if (proc_str == "SIMPLE") m_proc_builder = new Simple_builder(this);
 		//else if (proc_str == "SPX") m_proc_builder = new Spx_builder(this);
-        if (proc_str == "SPX") m_proc_builder = new Spx_builder(this);      
+            if (proc_str == "SPX") m_proc_builder = new Spx_builder(this);      
 	    else {
 	        cerr << "Processor type  " << proc_str << "  not supported\n";
 	        exit(1);
@@ -125,7 +125,7 @@ void SysBuilder_llp :: config_components()
 	            cerr << "Cache type  " << cache_str << "  not supported\n";
 		        exit(1);
 	        }
-        }
+            }
 	    catch (SettingNotFoundException e) {
 	        m_cache_builder = new MCP_lp_lls_builder(this); //default is MCP_lp_lls
 	    }
@@ -137,14 +137,15 @@ void SysBuilder_llp :: config_components()
 	    string mem_str = mem_chars;
 	    if(mem_str == "CAFFDRAM") m_mc_builder = new CaffDRAM_builder(this);
 	    else if(mem_str == "DRAMSIM") m_mc_builder = new DramSim_builder(this);
+	    else if(mem_str == "HMC") m_mc_builder = new hmc_builder(this);
 	    else {
 	        cerr << "Memory controller type  " << mem_str << "  not supported\n";
 	        exit(1);
-        }
-        m_mc_builder->read_config(m_config);
+            }
+            m_mc_builder->read_config(m_config);
 
 
-    	//processor assignment
+    	    //processor assignment
 	    //the node indices of processors are in an array, each value between 0 and MAX_NODES-1
 	    Setting& setting_proc = m_config.lookup("processor.node_idx");
 	    int num_proc = setting_proc.getLength(); //number of processors

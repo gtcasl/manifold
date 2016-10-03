@@ -41,6 +41,7 @@ pkginclude_iris_genericTopologydir = $(includedir)/manifold/iris/genericTopology
 pkginclude_interfaces_HEADERS = \
 	    interfaces/genericHeader.h \
 	    interfaces/genericIrisInterface.h \
+	    interfaces/hmcIrisInterface.h \
 	    interfaces/mapping.h \
 	    interfaces/simulatedLen.h \
 	    interfaces/vnetAssign.h
@@ -59,7 +60,8 @@ pkginclude_iris_genericTopology_HEADERS = \
             genericTopology/genericTopoCreator.h \
 	    genericTopology/ring.h \
 	    genericTopology/torus.h \
-	    genericTopology/torus6p.h
+	    genericTopology/torus6p.h \
+	    genericTopology/hmcNet.h
 
 ###libIris
 libiris_a_CPPFLAGS = -I. -I$(KERNEL_INC)

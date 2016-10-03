@@ -11,6 +11,7 @@
 #include "cache_builder.h"
 #include "network_builder.h"
 #include "mc_builder.h"
+#include "hmc_builder.h"
 #include "qsim_builder.h"
 #include "qsim.h"
 
