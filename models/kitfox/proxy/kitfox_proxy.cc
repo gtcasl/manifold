@@ -1,25 +1,28 @@
 #include "kitfox_proxy.h"
 #include "kitfox.h"
+#include "uarch/kitfoxCounter.h"
 
 using namespace std;
 using namespace libKitFox;
 using namespace manifold;
 using namespace manifold::kernel;
 using namespace manifold::kitfox_proxy;
+using namespace manifold::uarch;
 
-kitfox_proxy_t::kitfox_proxy_t(const char *ConfigFile, 
+kitfox_proxy_t::kitfox_proxy_t(const char *ConfigFile,
                                uint64_t SamplingInterval) :
     kitfox(NULL),
     sampling_interval(SamplingInterval)
 {
-    kitfox = new kitfox_t(/* Intra (local) MPI Comm */ NULL, 
+    kitfox = new kitfox_t(/* Intra (local) MPI Comm */ NULL,
                           /* Inter MPI Comm */ NULL);
+    comp_num = 0;
 
     cout << "Initializing KitFox ..." << endl;
     kitfox->configure(ConfigFile);
 
     /* Get the pair of <first ID, last ID> of KitFox pseudo components */
-    pair<Comp_ID, Comp_ID> kitfox_component_id = 
+    pair<Comp_ID, Comp_ID> kitfox_component_id =
     kitfox->component_id_range;
 
     /* Check which components are associated with which libraries. */
@@ -35,9 +38,11 @@ kitfox_proxy_t::kitfox_proxy_t(const char *ConfigFile,
             add_kitfox_thermal_component(pseudo_component_id);
         }
         /* Pseudo component is associated with reliability library. */
+#if 0
         if(kitfox->get_reliability_library(pseudo_component_id)) {
             add_kitfox_reliability_component(pseudo_component_id);
         }
+#endif
     }
 
     cout << "Finished initializing KitFox" << endl;
@@ -53,31 +58,44 @@ kitfox_proxy_t::~kitfox_proxy_t()
 
 void kitfox_proxy_t::tick()
 {
+    int core_id = 0;
+    for (CompId_t& id : manifold_node) {
+        // core_model only, FIXME add test function for other models here
+        // difference between manifold_node id and core_id???
+        kitfox_proxy_request_t<pipeline_counter_t> *req =
+            new kitfox_proxy_request_t<pipeline_counter_t> (core_id, "core");
+        Send(core_id, req);
+        core_id++;
+    }
+
+#if 0
     uint64_t clock_cycle = m_clk->NowTicks();
 
     /* Invoke KitFox calculations */
     if(clock_cycle % sampling_interval == 0) {
         /* Collect counters from Manifold nodes. */
-        map<libKitFox::Comp_ID, libKitFox::counter_t> counters;
-        for(vector<CompId_t>::iterator it = manifold_node.begin();
-            it != manifold_node.end(); it++) {
+        for(vector<pair<libKitFox::Comp_ID, libKitFox::counter_t*> >::iterator it
+                = kitfox_power_component.begin();
+            it != kitfox_power_component.end(); it++) {
         }
 
         /* Invoke calculate_power() */
-        for(vector<Comp_ID>::iterator it = kitfox_power_component.begin();
+        for(vector<pair<libKitFox::Comp_ID, libKitFox::counter_t*> >::iterator it
+                = kitfox_power_component.begin();
             it != kitfox_power_component.end(); it++) {
         }
 
         /* Invoke calculate_temperature() */
-        for(vector<Comp_ID>::iterator it = kitfox_power_component.begin();
-            it != kitfox_power_component.end(); it++) {
+        for(vector<Comp_ID>::iterator it = kitfox_thermal_component.begin();
+            it != kitfox_thermal_component.end(); it++) {
         }
 
         /* Invoke calculate_failure_rate() */
-        for(vector<Comp_ID>::iterator it = kitfox_power_component.begin();
-            it != kitfox_power_component.end(); it++) {
+        for(vector<Comp_ID>::iterator it = kitfox_reliability_component.begin();
+            it != kitfox_reliability_component.end(); it++) {
         }
     }
+#endif
 }
 
 
@@ -102,12 +120,13 @@ void kitfox_proxy_t::add_manifold_node(CompId_t NodeId)
 void kitfox_proxy_t::add_kitfox_power_component(Comp_ID ComponentID)
 {
     /* Check if there already exists the same component ID. */
-    for(vector<Comp_ID>::iterator it = kitfox_power_component.begin();
+    for(vector<pair<libKitFox::Comp_ID, libKitFox::counter_t*> >::iterator it =
+            kitfox_power_component.begin();
         it != kitfox_power_component.end(); it++) {
-        if((*it) == ComponentID) { return; }
+        if(it->first == ComponentID) { return; }
     }
 
-    kitfox_power_component.push_back(ComponentID);
+    kitfox_power_component.push_back(make_pair(ComponentID, (libKitFox::counter_t*)NULL));
 }
 
 /* Add KitFox components to calculate thermal. */
@@ -123,6 +142,7 @@ void kitfox_proxy_t::add_kitfox_thermal_component(Comp_ID ComponentID)
 }
 
 /* Add KitFox components to calculate reliability. */
+#if 0
 void kitfox_proxy_t::add_kitfox_reliability_component(Comp_ID ComponentID)
 {
     /* Check if there already exists the same component ID. */
@@ -133,3 +153,4 @@ void kitfox_proxy_t::add_kitfox_reliability_component(Comp_ID ComponentID)
 
     kitfox_reliability_component.push_back(ComponentID);
 }
+#endif

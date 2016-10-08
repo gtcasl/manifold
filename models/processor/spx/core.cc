@@ -36,7 +36,7 @@ spx_core_t::spx_core_t(const int nodeID, const char *configFileName, const int c
         fprintf(stdout,"cannot parse configuration file %s\n",configFileName);
         exit(EXIT_FAILURE);
     }
-  
+
     try {
         // Pipeline model
         const char *pipeline_model = parser.lookup("pipeline");
@@ -48,8 +48,8 @@ spx_core_t::spx_core_t(const int nodeID, const char *configFileName, const int c
             fprintf(stdout,"unknown core type %s\n",pipeline_model);
             exit(EXIT_FAILURE);
         }
-  
-        // Qsim proxy 
+
+        // Qsim proxy
         qsim_proxy = new spx_qsim_proxy_t(pipeline);
         pipeline->set_qsim_proxy(qsim_proxy);
     }
@@ -105,7 +105,7 @@ void spx_core_t::tick()
 
     if (get_qsim_osd_state() == QSIM_OSD_TERMINATED) {
         fprintf(stdout, "SPX core %d out of insn", core_id);
-        manifold::kernel::Manifold::Terminate(); 
+        manifold::kernel::Manifold::Terminate();
     }
 }
 
@@ -115,7 +115,7 @@ void spx_core_t::print_stats(uint64_t sampling_period, FILE *LogFile)
         fprintf(LogFile,"clk_cycle= %3.1lfM | core%d | \
                          IPC= %lf ( %lu / %lu ), \
                          avgIPC= %lf ( %lu / %lu )\n",
-                         (double)clock_cycle/1e6, core_id, 
+                         (double)clock_cycle/1e6, core_id,
                          (double)pipeline->stats.interval.uop_count / (double)pipeline->stats.interval.clock_cycle,
                          pipeline->stats.interval.uop_count,
                          pipeline->stats.interval.clock_cycle,

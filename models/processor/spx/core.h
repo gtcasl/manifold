@@ -13,7 +13,7 @@
 namespace manifold {
 namespace spx {
 
-enum QSIM_OSD_STATE { 
+enum QSIM_OSD_STATE {
     QSIM_OSD_TERMINATED = 0,
     QSIM_OSD_IDLE,
     QSIM_OSD_ACTIVE
@@ -43,16 +43,34 @@ public:
 
     void send_qsim_proxy_request();
 
+#ifdef LIBKITFOX
+    template <typename T> void handle_kitfox_proxy_request(int temp, T *kitfox_proxy_request);
+#endif // LIBKITFOX
+
     int node_id; // manifold node ID
     int core_id; // core ID
     uint64_t clock_cycle;
     bool active;
-    
+
 private:
     pipeline_t *pipeline; // base class of pipeline models
     spx_qsim_proxy_t *qsim_proxy;
     bool qsim_proxy_request_sent;
 };
+
+#ifdef LIBKITFOX
+template <typename T>
+void spx_core_t::handle_kitfox_proxy_request(int temp, T *kitfox_proxy_request)
+{
+    assert(kitfox_proxy_request->get_name() == "core");
+    assert(kitfox_proxy_request->get_id() == core_id);
+
+    kitfox_proxy_request->set_counter(pipeline->counter);
+    pipeline->counter.clear();
+
+    Send(OUT_TO_KITFOX, kitfox_proxy_request);
+}
+#endif // LIBKITFOX
 
 } // namespace spx
 } // namespace manifold

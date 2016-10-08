@@ -10,6 +10,10 @@
 #include "qsim.h"
 #include "interrupt_handler/interrupt_handler.h"
 
+#ifdef LIBKITFOX
+#include "kitfox_builder.h"
+using namespace manifold::kitfox_proxy;
+#endif
 
 class ProcBuilder {
 public:
@@ -17,11 +21,11 @@ public:
 
     enum FEType {INVALID_FE_TYPE=0, QSIMCLIENT, QSIMLIB, QSIMPROXY, TRACE};  //front-end type
 
-    ProcBuilder(SysBuilder_llp* b) : m_fe_type(INVALID_FE_TYPE), 
-                                     m_sysBuilder(b), 
+    ProcBuilder(SysBuilder_llp* b) : m_fe_type(INVALID_FE_TYPE),
+                                     m_sysBuilder(b),
                                      m_qsim_interrupt_handler_clock(0),
                                      m_qsim_interrupt_handler(0) {}
-    virtual ~ProcBuilder() { 
+    virtual ~ProcBuilder() {
         delete m_qsim_interrupt_handler_clock;
         delete m_qsim_interrupt_handler;
     }
@@ -36,6 +40,10 @@ public:
     virtual void create_qsimlib_procs(std::map<int,int>& id_lp) = 0;
     virtual void create_qsimproxy_procs(std::map<int,int>& id_lp) = 0;
     virtual void create_trace_procs(std::map<int,int>& id_lp) = 0;
+
+#ifdef LIBKITFOX
+    virtual void connect_proc_kitfox_proxy(KitFoxBuilder* kitfox_builder) = 0;
+#endif
 
     virtual void connect_proc_cache(CacheBuilder* cache_builder) = 0;
     virtual void connect_proc_qsim_proxy(QsimBuilder* qsim_builder) = 0;
@@ -80,7 +88,7 @@ public:
     void read_config(libconfig::Config&);
     void set_qsimclient_vals(const char* server, int port) {
         m_server = server;
-	m_port = port;
+    m_port = port;
     }
     void set_qsimlib_vals(Qsim::OSDomain* osd) {
         m_qsim_osd = osd;
@@ -126,15 +134,15 @@ public:
     ProcType get_proc_type() { return PROC_SIMPLE; }
 
     void read_config(libconfig::Config&) {
-	m_use_default_clock = true;
+    m_use_default_clock = true;
     }
     void set_qsimclient_vals(int l1_line_sz, const char* server, int port) {
         m_l1_line_sz = l1_line_sz;
         m_server = server;
-	m_port = port;
+    m_port = port;
     }
     void set_qsimlib_vals(int l1_line_sz, Qsim::OSDomain* osd) {
-	m_l1_line_sz = l1_line_sz;
+    m_l1_line_sz = l1_line_sz;
         m_qsim_osd = osd;
     }
     void set_trace_vals(int l1_line_sz, const char* trace) {
@@ -178,7 +186,7 @@ public:
     #if 0
     void set_qsimclient_vals(const char* server, int port) {
         m_server = server;
-	m_port = port;
+    m_port = port;
     }
     #endif
 
@@ -190,6 +198,10 @@ public:
     void create_qsimclient_procs(std::map<int,int>& id_lp); //qsimclient not supported
     void create_qsimproxy_procs(std::map<int,int>& id_lp);
     void create_trace_procs(std::map<int,int>& id_lp); //trace not supported
+
+#ifdef LIBKITFOX
+    void connect_proc_kitfox_proxy(KitFoxBuilder* kitfox_builder);
+#endif
 
     void connect_proc_cache(CacheBuilder* cache_builder);
     void connect_proc_qsim_proxy(QsimBuilder* qsim_builder);
