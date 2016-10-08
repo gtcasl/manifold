@@ -18,6 +18,7 @@ addons:
         - qemu-user
         - qemu
 before_install:
+    - sudo apt-get -qq update
     - sudo apt-get -y build-dep qemu linux-meta
     - export MANIFOLD_DIR=`pwd`
     - git clone https://github.com/gtcasl/qsim
@@ -37,8 +38,15 @@ before_install:
     - cd $QSIM_PREFIX
     - make release install
     - cd ..
+    - git clone https//github.com/sixshotx/kitfox
+    - cd kitfox
+    - sudo apt-get -y install flex bison
+    - make mcpat;make 3dice
+    - make kitfox 
+    - export KITFOX_PREFIX=`pwd`
+    - cd ..
 script:
-    - ./configure QSIMINC=${QSIM_PREFIX}/include
+    - ./configure QSIMINC=${QSIM_PREFIX}/include KITFOX_INC=${KITFOX_PREFIX}
     - make
     - cd ${MANIFOLD_DIR}/simulator/smp/QsimProxy
     - make
