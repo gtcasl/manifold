@@ -37,6 +37,7 @@ fi
 
 # Build manifold simulator
 echo "Building manifold components ..."
+autoreconf -siv
 if [  -z "$KITFOX_PREFIX" ]; then
     echo "\n${bold}kitfox library${normal} disabled "
     echo "Press any key to continue..."
