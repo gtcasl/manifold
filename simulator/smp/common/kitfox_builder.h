@@ -12,10 +12,13 @@ public:
     virtual ~KitFoxBuilder();
 
     int get_component_id() const { return component_id; }
+    void create_proxy();
     manifold::kitfox_proxy::kitfox_proxy_t* get_kitfox() const { return proxy; }
 
 protected:
     manifold::kitfox_proxy::kitfox_proxy_t *proxy;
+    const char* m_config_file;
+    const uint64_t m_clock_freq;
 
     int component_id;
 };

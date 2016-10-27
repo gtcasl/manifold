@@ -10,16 +10,18 @@ using namespace manifold::kitfox_proxy;
 using namespace manifold::uarch;
 
 kitfox_proxy_t::kitfox_proxy_t(const char *ConfigFile,
-                               uint64_t SamplingInterval) :
-    kitfox(NULL),
-    sampling_interval(SamplingInterval)
+                               uint64_t SamplingFreq) :
+    comp_num(0)
 {
     kitfox = new kitfox_t(/* Intra (local) MPI Comm */ NULL,
                           /* Inter MPI Comm */ NULL);
-    comp_num = 0;
 
     cout << "Initializing KitFox ..." << endl;
     kitfox->configure(ConfigFile);
+
+    cout << "Registering clock ( " << SamplingFreq / 1e6  << " MHz) to KitFox Proxy ..." << endl;
+    Clock* clk = new Clock(SamplingFreq);
+    manifold::kernel::Clock :: Register(*clk, (kitfox_proxy_t*)this, &kitfox_proxy_t::tick, (void(kitfox_proxy_t::*)(void))0);
 
     /* Get the pair of <first ID, last ID> of KitFox pseudo components */
     pair<Comp_ID, Comp_ID> kitfox_component_id =
@@ -53,18 +55,22 @@ kitfox_proxy_t::~kitfox_proxy_t()
 {
     cout << "Terminating KitFox" << endl;
     delete kitfox;
+    delete m_clk;
 }
 
 
 void kitfox_proxy_t::tick()
 {
+    if (m_clk->NowTicks() == 0)
+        return ;
+
     int core_id = 0;
     for (CompId_t& id : manifold_node) {
         // core_model only, FIXME add test function for other models here
         // difference between manifold_node id and core_id???
         kitfox_proxy_request_t<pipeline_counter_t> *req =
-            new kitfox_proxy_request_t<pipeline_counter_t> (core_id, "core");
-        Send(core_id, req);
+            new kitfox_proxy_request_t<pipeline_counter_t> (core_id, KitFoxType::core_type, m_clk->NowTicks() * m_clk->period);
+        Send(id, req);
         core_id++;
     }
 

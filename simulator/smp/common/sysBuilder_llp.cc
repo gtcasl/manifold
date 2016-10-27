@@ -85,13 +85,12 @@ void SysBuilder_llp :: config_components()
             m_DEFAULT_CLOCK_FREQ = -1;
         }
 
-
 #ifdef LIBKITFOX
         //kitfox
         try {
             const char* kitfox_chars = m_config.lookup("kitfox_config");
-            uint64_t sampling_interval = m_config.lookup("kitfox_interval");
-            m_kitfox_builder = new KitFoxBuilder(kitfox_chars, sampling_interval);
+            uint64_t sampling_freq = m_config.lookup("kitfox_freq");
+            m_kitfox_builder = new KitFoxBuilder(kitfox_chars, sampling_freq);
             if(m_kitfox_builder == NULL)
             {
                     cerr << "KitFox config  " << kitfox_chars << "  contains errors\n";
@@ -221,7 +220,7 @@ void SysBuilder_llp :: build_system(FrontendType type, int n_lps, vector<string>
 {
     assert(m_conf_read == true);
 
-    // create default clock
+    // create default clock, this is the Master Clock
     m_default_clock = 0;
     if(m_DEFAULT_CLOCK_FREQ > 0)
         m_default_clock = new Clock(m_DEFAULT_CLOCK_FREQ);
@@ -233,6 +232,10 @@ void SysBuilder_llp :: build_system(FrontendType type, int n_lps, vector<string>
 
     //??????????????? todo: network should be able to use different clock
     m_network_builder->create_network(*m_default_clock, part);
+
+#ifdef LIBKITFOX
+    m_kitfox_builder->create_proxy();
+#endif
 
     assert(m_proc_builder->get_fe_type() == ProcBuilder::INVALID_FE_TYPE);
     switch(type) {
@@ -264,7 +267,7 @@ void SysBuilder_llp :: build_system(Qsim::OSDomain* qsim_osd, vector<string>& ar
 {
     assert(m_conf_read == true);
 
-    // create default clock
+    // create default clock, this is the Master Clock
     m_default_clock = 0;
     if(m_DEFAULT_CLOCK_FREQ > 0)
         m_default_clock = new Clock(m_DEFAULT_CLOCK_FREQ);
@@ -276,6 +279,10 @@ void SysBuilder_llp :: build_system(Qsim::OSDomain* qsim_osd, vector<string>& ar
 
     //??????????????? todo: network should be able to use different clock
     m_network_builder->create_network(*m_default_clock, PART_1);
+
+#ifdef LIBKITFOX
+    m_kitfox_builder->create_proxy();
+#endif
 
     assert(m_proc_builder->get_fe_type() == ProcBuilder::INVALID_FE_TYPE);
     m_proc_builder->set_fe_type(ProcBuilder::QSIMLIB);
@@ -293,7 +300,7 @@ void SysBuilder_llp :: build_system(vector<string>& args, const char *stateFile,
 {
     assert(m_conf_read == true);
 
-    // create default clock
+    // create default clock, this is the Master Clock
     m_default_clock = 0;
     if(m_DEFAULT_CLOCK_FREQ > 0)
         m_default_clock = new Clock(m_DEFAULT_CLOCK_FREQ);
@@ -305,6 +312,10 @@ void SysBuilder_llp :: build_system(vector<string>& args, const char *stateFile,
 
     //??????????????? todo: network should be able to use different clock
     m_network_builder->create_network(*m_default_clock, PART_1);
+
+#ifdef LIBKITFOX
+    m_kitfox_builder->create_proxy();
+#endif
 
     assert(m_proc_builder->get_fe_type() == ProcBuilder::INVALID_FE_TYPE);
     m_proc_builder->set_fe_type(ProcBuilder::QSIMPROXY);

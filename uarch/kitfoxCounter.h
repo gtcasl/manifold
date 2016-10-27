@@ -8,6 +8,15 @@
 namespace manifold {
 namespace uarch {
 
+enum KitFoxType {
+    null_type = 0,
+    core_type,
+    cache_type,
+    network_type,
+    dram_type,
+    num_types
+};
+
 
 class counter_t : public libKitFox::counter_t
 {

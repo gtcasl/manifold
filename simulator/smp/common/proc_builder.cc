@@ -510,11 +510,12 @@ void Spx_builder :: connect_proc_kitfox_proxy(KitFoxBuilder* kitfox_builder)
     for(map<int,int>::iterator it = m_proc_id_cid_map.begin(); it != m_proc_id_cid_map.end(); ++it) {
         int proc_cid = (*it).second;
 
-        //connect proc with qsim proxy
+        //connect proc with kitfox proxy
         Manifold :: Connect(proc_cid, spx_core_t::OUT_TO_KITFOX, &spx_core_t::handle_kitfox_proxy_request<kitfox_proxy_request_t<manifold::uarch::pipeline_counter_t>>,
                             kitfox_cid, proc_cid, &kitfox_proxy_t::handle_kitfox_proxy_response<manifold::uarch::pipeline_counter_t>,
                             Clock::Master(), Clock::Master(), 1, 1);
-        kitfox_builder->get_kitfox()->add_manifold_node(proc_cid);
+        if (kitfox_builder->get_kitfox())
+            kitfox_builder->get_kitfox()->add_manifold_node(proc_cid);
     }
 }
 #endif

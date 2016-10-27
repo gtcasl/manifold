@@ -62,7 +62,7 @@ private:
 template <typename T>
 void spx_core_t::handle_kitfox_proxy_request(int temp, T *kitfox_proxy_request)
 {
-    assert(kitfox_proxy_request->get_name() == "core");
+    assert(kitfox_proxy_request->get_type() == manifold::uarch::KitFoxType::core_type);
     assert(kitfox_proxy_request->get_id() == core_id);
 
     kitfox_proxy_request->set_counter(pipeline->counter);
