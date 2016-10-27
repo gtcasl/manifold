@@ -18,7 +18,7 @@ outorder_t::outorder_t(spx_core_t *spx_core, libconfig::Config *parser)
     // set config
     set_config(parser);
     assert(QSIM_N_REGS != 0);
-    
+
     // initialize core components
     instQ = new instQ_t((pipeline_t*)this,config.instQ_size,config.cache_line_width);
     ROB = new ROB_t((pipeline_t*)this,config.ROB_size);
@@ -38,7 +38,7 @@ outorder_t::~outorder_t()
     delete STQ;
     delete LDQ;
     delete RF;
-    
+
     for(vector<EX_t*>::iterator it = EX.begin(); it != EX.end(); it++)
       delete *it;
     EX.clear();
@@ -53,12 +53,12 @@ void outorder_t::set_config(libconfig::Config *parser)
             config.memory_deadlock_avoidance = parser->lookup("memory_deadlock_avoidance");
             config.memory_deadlock_threshold = parser->lookup("memory_deadlock_threshold");
         }
-    
+
         config.fetch_width = parser->lookup("fetch_width");
         config.alloc_width = parser->lookup("allocate_width");
         config.exec_width = parser->lookup("execute_width");
         config.commit_width = parser->lookup("commit_width");
-        
+
         config.instQ_size = parser->lookup("instQ_size");
         config.RS_size = parser->lookup("RS_size");
         config.LDQ_size = parser->lookup("LDQ_size");
@@ -70,13 +70,13 @@ void outorder_t::set_config(libconfig::Config *parser)
             case str2int("x64") : config.arch_type = SPX_X64; break;
             case str2int("a64") : config.arch_type = SPX_A64; break;
             case str2int("x86") : config.arch_type = SPX_X86; break;
-            default: 
+            default:
                 fprintf(stderr, "unknown arch_type in config file, please specify among x86/x64/a64\n");
                 exit(1);
         }
         fprintf(stdout, "arch_type %d\n", config.arch_type);
-         
-        
+
+
         config.FU_delay[SPX_FU_INT] = parser->lookup("FU_INT.delay");
         config.FU_delay[SPX_FU_MUL] = parser->lookup("FU_MUL.delay");
         config.FU_delay[SPX_FU_FP] = parser->lookup("FU_FP.delay");
@@ -84,7 +84,7 @@ void outorder_t::set_config(libconfig::Config *parser)
         config.FU_delay[SPX_FU_BR] = parser->lookup("FU_BR.delay");
         config.FU_delay[SPX_FU_LD] = parser->lookup("FU_LD.delay");
         config.FU_delay[SPX_FU_ST] = parser->lookup("FU_ST.delay");
-        
+
         config.FU_issue_rate[SPX_FU_INT] = parser->lookup("FU_INT.issue_rate");
         config.FU_issue_rate[SPX_FU_MUL] = parser->lookup("FU_MUL.issue_rate");
         config.FU_issue_rate[SPX_FU_FP] = parser->lookup("FU_FP.issue_rate");
@@ -129,7 +129,7 @@ void outorder_t::set_config(libconfig::Config *parser)
             config.mem_addr_mask = ~0x0;
         }
         fprintf(stdout,"mem addr mask: 0x%lx\n", config.mem_addr_mask);
-            
+
 #ifdef LIBEI
         cache_config_t cache_config;
 
@@ -151,7 +151,7 @@ void outorder_t::set_config(libconfig::Config *parser)
             cache_config.block_size = page_size; // Treat it like 4KB-line cache
             data_tlb = new cache_table_t(SPX_DATA_TLB,0,cache_config,this);
         }
-        
+
         if(parser->exists("inst_tlb")) {
             setting = &parser->lookup("inst_tlb");
             uint64_t block_size = (*setting)["block_size"];
@@ -162,7 +162,7 @@ void outorder_t::set_config(libconfig::Config *parser)
             cache_config.block_size = page_size; // Treat it like 4KB-line cache
             inst_tlb = new cache_table_t(SPX_INST_TLB,0,cache_config,this);
         }
-        
+
         if(parser->exists("l2_tlb")) {
             setting = &parser->lookup("l2_tlb");
             uint64_t block_size = (*setting)["block_size"];
@@ -172,7 +172,7 @@ void outorder_t::set_config(libconfig::Config *parser)
             cache_config.cache_size = page_size*(cache_config.cache_size/block_size);
             cache_config.block_size = page_size; // Treat it like 4KB-line cache
             l2_tlb = new cache_table_t(SPX_L2_TLB,1,cache_config,this);
-            
+
             assert((data_tlb != NULL)||(inst_tlb != NULL));
             if(data_tlb) { data_tlb->add_next_level(l2_tlb); }
             if(inst_tlb) { inst_tlb->add_next_level(l2_tlb); }
@@ -193,21 +193,21 @@ void outorder_t::commit()
 {
     for(int committed = 0; committed < config.commit_width; committed++) {
         inst_t *inst = ROB->get_front();
-    
+
         if(inst) {
             ROB->pop_front();
             RF->writeback(inst);
             stats.last_commit_cycle = core->clock_cycle;
-          
+
             if(inst->memcode == SPX_MEM_ST) { STQ->schedule(inst); } // update this store inst ready to cache
-            else { 
+            else {
                 // Do not delete the squashed memory inst, hoping that it will return sometime later.
                 if(!inst->squashed) { delete inst; }
             }
         }
         else { break; } // empty ROB or ROB head not completed
     }
-    
+
     if(Qsim_osd_state != QSIM_OSD_ACTIVE) { stats.last_commit_cycle = core->clock_cycle; }
     else if(core->clock_cycle - stats.last_commit_cycle > config.memory_deadlock_threshold) {
         // If the pipeline stalls for too long, it is only due to unreturned load request.
@@ -215,9 +215,9 @@ void outorder_t::commit()
             avoid_memory_deadlock();
         else {
             fprintf(stdout,"SPX_ERROR (core %d): possible pipeline deadlock at %lu\n",core->core_id,stats.last_commit_cycle);
-    
+
             inst_t *deadlock_inst = ROB->get_head();
-            if(deadlock_inst) { 
+            if(deadlock_inst) {
                 fprintf(stdout,"ROB HEAD INSTS\n");
                 while(deadlock_inst) {
                     debug_deadlock_inst(deadlock_inst);
@@ -291,13 +291,13 @@ void outorder_t::allocate()
                         }
                         else { break; } // LDQ full
                     }
-          
+
                     RF->resolve_dependency(inst);
                     RS->port_binding(inst);
                     RS->push_back(inst);
                 }
                 else { break; } // RS full
-        
+
                 instQ->pop_front();
                 ROB->push_back(inst);
             }
@@ -315,7 +315,7 @@ void outorder_t::frontend()
             stats.uop_count++;
             stats.interval.Mop_count++;
             stats.interval.uop_count++;
-          
+
             next_inst = new inst_t(core,++Mop_count,++uop_count);
 
             int rc = qsim_proxy->run(core->core_id, 1);
@@ -356,7 +356,7 @@ void outorder_t::frontend()
 void outorder_t::fetch(inst_t *inst)
 {
     instQ->push_back(inst);
-    
+
     /* Roll back counters for nop instructions */
     if(is_nop(inst)) {
         stats.Mop_count--;
@@ -369,25 +369,25 @@ void outorder_t::fetch(inst_t *inst)
 void outorder_t::handle_cache_response(int temp, cache_request_t *cache_request)
 {
     inst_t *inst = cache_request->inst;
-  
+
     assert(inst);
     if(core->core_id != core->core_id) {
         fprintf(stdout,"SPX_ERROR (core %d) | %lu : strange cache response uop %lu (Mop %lu) %s (addr %016llx) of core %d received\n",core->core_id,core->clock_cycle,inst->uop_sequence,inst->Mop_sequence,(inst->memcode==SPX_MEM_LD)?"SPX_MEM_LD":"SPX_MEM_ST",inst->data.paddr,core->core_id);
         debug_deadlock_inst(inst);
         exit(1);
     }
-  
+
     if(inst->squashed) {
-#ifdef SPX_DEADLOCK_DEBUG    
+#ifdef SPX_DEADLOCK_DEBUG
         fprintf(stdout,"SPX_DEADLOCK_DEBUG (core %d) | cache response of uop %lu (Mop %lu) %s (addr %016llx) returned in %lu cycles\n",core->core_id,inst->uop_sequence,inst->Mop_sequence,(inst->memcode==SPX_MEM_LD)?"SPX_MEM_LD":"SPX_MEM_ST",inst->data.paddr,core->clock_cycle-inst->memory_request_time_stamp);
 #endif
         // The cache response returned after the inst already committed. Delete the inst.
         if((ROB->get_head() == NULL)||(inst->uop_sequence < ROB->get_head()->uop_sequence)) {
             delete inst;
         }
-        else { 
+        else {
             inst->squashed = false; // Cache response returned luckily before the inst commits.
-        } 
+        }
     }
     else {
 #ifdef SPX_DEBUG

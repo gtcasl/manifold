@@ -12,13 +12,13 @@
 namespace manifold {
 namespace spx {
 
-enum SPX_FU 
-{ 
-    SPX_FU_INT, SPX_FU_MUL, SPX_FU_FP, 
-    SPX_FU_MOV, SPX_FU_BR, SPX_FU_LD, 
-    SPX_FU_ST, SPX_NUM_FU_TYPES 
+enum SPX_FU
+{
+    SPX_FU_INT, SPX_FU_MUL, SPX_FU_FP,
+    SPX_FU_MOV, SPX_FU_BR, SPX_FU_LD,
+    SPX_FU_ST, SPX_NUM_FU_TYPES
 };
-  
+
 enum SPX_FP_REGS
 {
     SPX_FP_REG_ST0 = 0, SPX_FP_REG_ST1,
@@ -130,7 +130,7 @@ public:
 
     int delay;
     int issue_rate;
-    
+
 private:
     std::vector<inst_t*> queue;
     pipeline_t *pipeline;

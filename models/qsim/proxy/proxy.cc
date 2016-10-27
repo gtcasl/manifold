@@ -83,4 +83,3 @@ void qsim_proxy_t::reg_cb(int core_id, int reg, uint8_t size, int type)
 #endif
     buffer.push_back(QueueItem(core_id, reg, size, type));
 }
-

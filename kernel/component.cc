@@ -21,13 +21,13 @@ std::map<string, CompId_t> Component::AllNames;
 
 // Static functions
 bool Component::IsLocal(CompId_t id)
-{ 
-    return (Manifold::GetRank() == GetComponentLP(id)); 
+{
+    return (Manifold::GetRank() == GetComponentLP(id));
 }
 
 bool Component::IsLocal(const string& name)
 {
-    return (Manifold::GetRank() == GetComponentLP(name)); 
+    return (Manifold::GetRank() == GetComponentLP(name));
 }
 
 // This is bogus; find the right spot for this
@@ -56,21 +56,21 @@ Component::~Component()
 // Get the component, returning base class
 Component* Component::GetComponent(CompId_t id)
 {
-  if ( id >= (signed int)AllComponents.size() || id < 0 ) return 0;	  
+  if ( id >= (signed int)AllComponents.size() || id < 0 ) return 0;
   return AllComponents[id].component;
 }
 
 // Get the component, returning base class
 Component* Component::GetComponent(const string& name)
 {
-  NameMap::iterator iter = AllNames.find(name);  
-  if ( name == "None" || iter == AllNames.end() ) return 0;	  
+  NameMap::iterator iter = AllNames.find(name);
+  if ( name == "None" || iter == AllNames.end() ) return 0;
   return AllComponents[AllNames[name]].component;
 }
 
 LpId_t Component::GetComponentLP(CompId_t id)
 {
-  if ( id >= (signed int)AllComponents.size() || id < 0 ) return -1;	  
+  if ( id >= (signed int)AllComponents.size() || id < 0 ) return -1;
   return AllComponents[id].lp;
 }
 
@@ -78,7 +78,7 @@ LpId_t Component::GetComponentLP(const string& name)
 {
   NameMap::iterator iter = AllNames.begin();
   iter = AllNames.find(name);
-  if ( name == "None" || iter == AllNames.end() ) return -1;	  
+  if ( name == "None" || iter == AllNames.end() ) return -1;
   return AllComponents[AllNames[name]].lp;
 }
 
@@ -104,11 +104,11 @@ void Component::add_border_port(int srcPort, int dstLP, Clock* clk)
 {
     // First insure the vector is large enough, add nulls if not
     while ((int)border_ports.size() <= srcPort)
-	border_ports.push_back(0);
+        border_ports.push_back(0);
 
     if(border_ports[srcPort] != 0) { //already created
-	cerr << "WARNING: output port connects to multiple components! this is not currently supported!\n";
-	return;
+        cerr << "WARNING: output port connects to multiple components! this is not currently supported!\n";
+        return;
     }
 
     border_ports[srcPort] = new BorderPort(srcPort, GetComponentLP(myId), dstLP, clk);
