@@ -44,7 +44,7 @@ bool MESI_L2_cache_manager :: process_lower_client_request(void* request, bool f
     Coh_msg* req = (Coh_msg*)request;
     assert(req->type == Coh_msg :: COH_REQ);
     if(first)
-	process(req->msg, req->src_id);
+    process(req->msg, req->src_id);
     return (req_pending() == false);
 }
 
@@ -71,9 +71,9 @@ void MESI_L2_cache_manager :: sendmsg(bool req, MESI_messages_t msg, int dest_id
 //std::cout << "MESI_L2_cache_manager sendmsg(), msg= " << msg << " dest= " << dest_id << " fwd= " << fwd_id << std::endl;
     Coh_msg* message = new Coh_msg();
     if(req)
-	message->type = Coh_msg :: COH_REQ;
+    message->type = Coh_msg :: COH_REQ;
     else
-	message->type = Coh_msg :: COH_RPLY;
+    message->type = Coh_msg :: COH_RPLY;
     message->addr = m_l2_cache->get_hash_entry_by_idx(id)->get_line_addr();
     message->msg = msg;
     message->dst_id = dest_id;
@@ -81,15 +81,15 @@ void MESI_L2_cache_manager :: sendmsg(bool req, MESI_messages_t msg, int dest_id
 
     //stats - coherence related messages
     switch(msg) {
-	case MESI_MC_GRANT_I:
-	case MESI_MC_FWD_E:
-	case MESI_MC_FWD_S:
-	case MESI_MC_DEMAND_I:
-	    stats_coh_msg++;
-	    break;
-	default:
-	    //do nothing
-	    break;
+    case MESI_MC_GRANT_I:
+    case MESI_MC_FWD_E:
+    case MESI_MC_FWD_S:
+    case MESI_MC_DEMAND_I:
+        stats_coh_msg++;
+        break;
+    default:
+        //do nothing
+        break;
     }//switch
 
     m_l2_cache->send_msg_to_l1(message);
@@ -128,18 +128,18 @@ MESI_L2_cache :: MESI_L2_cache (int nid, const cache_settings& parameters, const
 
     for(unsigned i=0; i<all_sets.size(); i++) {
         vector<hash_entry*> entries;
-	all_sets[i]->get_entries(entries);
-	for(unsigned e=0; e<entries.size(); e++) {
-	    int idx = entries[e]->get_idx();
-	    assert(idx >= 0 && idx < managers.size());
+    all_sets[i]->get_entries(entries);
+    for(unsigned e=0; e<entries.size(); e++) {
+        int idx = entries[e]->get_idx();
+        assert(idx >= 0 && idx < managers.size());
 
-	    hash_entries[idx] = entries[e];
-	}
+        hash_entries[idx] = entries[e];
+    }
     }
 
     for(unsigned i=0; i<managers.size(); i++) {
         assert(hash_entries[i]->get_idx() == i);
-	assert(managers[i]->getManagerID() == i);
+    assert(managers[i]->getManagerID() == i);
     }
 
 }
@@ -167,9 +167,9 @@ void MESI_L2_cache :: print_stats(ostream& out)
 
     for(unsigned i=0; i<managers.size(); i++) {
         MESI_L2_cache_manager* m = dynamic_cast<MESI_L2_cache_manager*>(managers[i]);
-	total_coh_msg += m->get_stats_coh_msg();
+    total_coh_msg += m->get_stats_coh_msg();
     }
-    
+
     out << " MESI_L2_cache coherence messages: " << total_coh_msg << endl;
 
 }
@@ -177,5 +177,3 @@ void MESI_L2_cache :: print_stats(ostream& out)
 
 } //namespace mcp_cache
 } //namespace manifold
-
-

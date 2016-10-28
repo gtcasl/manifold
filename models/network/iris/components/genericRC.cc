@@ -1,4 +1,4 @@
-#include	"genericRC.h"
+#include "genericRC.h"
 #include "simpleRouter.h"
 #include "assert.h"
 
@@ -132,6 +132,208 @@ GenericRC::route_torus(HeadFlit* hf)
 
     assert(0); //should not reach here
 }
+
+#if 0
+void
+GenericRC::route_torus6p(HeadFlit* hf)
+{
+    uint myx = (int)(node_id%grid_size);
+    uint destx = (int)(hf->dst_id%grid_size);
+    uint myy = (int)(node_id/grid_size);
+    uint desty = (int)(hf->dst_id/grid_size);
+
+    if ( myx == destx  && myy == desty )
+    {
+	/* Decide based on whether terminal is a memory or cache */
+        //std::cerr << hf->term << "," << destx << "," << desty << endl;
+
+	if (hf->term == MEMORY)
+            possible_out_ports.push_back(SimpleRouter::PORT_MC);
+	else
+            possible_out_ports.push_back(SimpleRouter::PORT_NI);	
+
+	decide_vc_simple(hf);
+        return;
+    } 
+    else if ( myx == destx ) /*  reached row but not col */
+    {
+        /*  Decide the port based on hops around the ring */
+        if ( desty > myy )
+        {
+            if ((desty-myy)>no_nodes/grid_size/2) // > Y_dimension/2
+                possible_out_ports.push_back(SimpleRouter::PORT_NORTH);
+
+            else
+                possible_out_ports.push_back(SimpleRouter::PORT_SOUTH);
+        }
+        else
+        {
+            if ((myy - desty )>no_nodes/grid_size/2)
+                possible_out_ports.push_back(SimpleRouter::PORT_SOUTH);
+            else
+                possible_out_ports.push_back(SimpleRouter::PORT_NORTH);
+        }
+
+	// Decide the vc
+        if( possible_out_ports[0] == SimpleRouter::PORT_NORTH )
+        {
+            desty = (grid_size-desty)%grid_size;
+            myy= (grid_size-myy)%grid_size;
+        }
+
+	decide_vc_for_ring(desty, myy, hf);
+
+        return;
+    } 
+    /*  both row and col dont match do x first. Y port is 
+     *  adaptive in this case and can only be used with the adaptive vc */
+    else 
+    {
+        if ( destx > myx )
+        {
+            if ((destx - myx)>grid_size/2)
+                possible_out_ports.push_back(SimpleRouter::PORT_WEST);
+            else
+                possible_out_ports.push_back(SimpleRouter::PORT_EAST);
+        }
+        else
+        {
+            if ((myx - destx )>grid_size/2)
+                possible_out_ports.push_back(SimpleRouter::PORT_EAST);
+            else
+                possible_out_ports.push_back(SimpleRouter::PORT_WEST);
+        }
+
+	// Decide the vc
+        if( possible_out_ports[0] == SimpleRouter::PORT_WEST)
+        {
+            destx = (grid_size-destx)%grid_size;
+            myx= (grid_size-myx)%grid_size;
+        }
+
+	decide_vc_for_ring(destx, myx, hf);
+
+        return;
+    }
+
+    assert(0); //should not reach here
+}
+#endif
+
+#if 1
+void
+GenericRC::route_torus6p(HeadFlit* hf)
+{
+    uint myx = (int)(node_id%grid_size);
+    uint destx = (int)(hf->dst_id%grid_size);
+    uint myy = (int)(node_id/grid_size);
+    uint desty = (int)(hf->dst_id/grid_size);
+
+    if ( myx == destx  && myy == desty )
+    {
+	/* Decide based on whether terminal is a memory or cache */
+	if (hf->term == MEMORY)
+        	possible_out_ports.push_back(SimpleRouter::PORT_MC);
+	else
+        	possible_out_ports.push_back(SimpleRouter::PORT_NI);		
+   //     possible_out_ports.push_back(SimpleRouter::PORT_NI);
+        if ( hf->mclass == MC_RESP)
+            possible_out_vcs.push_back(1);
+        else
+            possible_out_vcs.push_back(0);
+        return;
+    } 
+    else if ( myx == destx ) /*  reached row but not col */
+    {
+        /*  Decide the port based on hops around the ring */
+        if ( desty > myy )
+        {
+            if ((desty-myy)>no_nodes/grid_size/2) // > Y_dimension/2
+                possible_out_ports.push_back(SimpleRouter::PORT_NORTH);
+
+            else
+                possible_out_ports.push_back(SimpleRouter::PORT_SOUTH);
+        }
+        else
+        {
+            if ((myy - desty )>no_nodes/grid_size/2)
+                possible_out_ports.push_back(SimpleRouter::PORT_SOUTH);
+            else
+                possible_out_ports.push_back(SimpleRouter::PORT_NORTH);
+        }
+
+        /* Decide the vc */
+        if( possible_out_ports[0] == SimpleRouter::PORT_NORTH )
+        {
+            desty = (grid_size-desty)%grid_size;
+            myy= (grid_size-myy)%grid_size;
+        }
+
+        if ( desty > myy )
+        {
+            if ( hf->mclass == MC_RESP)
+                possible_out_vcs.push_back(3);
+            else
+                possible_out_vcs.push_back(2);
+        }
+        else
+        {
+            if ( hf->mclass == MC_RESP)
+                possible_out_vcs.push_back(1);
+            else
+                possible_out_vcs.push_back(0);
+        }
+
+
+        return;
+    } 
+    /*  both row and col dont match do x first. Y port is 
+     *  adaptive in this case and can only be used with the adaptive vc */
+    else 
+    {
+        if ( destx > myx )
+        {
+            if ((destx - myx)>grid_size/2)
+                possible_out_ports.push_back(SimpleRouter::PORT_WEST);
+            else
+                possible_out_ports.push_back(SimpleRouter::PORT_EAST);
+        }
+        else
+        {
+            if ((myx - destx )>grid_size/2)
+                possible_out_ports.push_back(SimpleRouter::PORT_EAST);
+            else
+                possible_out_ports.push_back(SimpleRouter::PORT_WEST);
+        }
+
+        /* Decide the vc */
+        if( possible_out_ports[0] == SimpleRouter::PORT_WEST)
+        {
+            destx = (grid_size-destx)%grid_size;
+            myx= (grid_size-myx)%grid_size;
+        }
+
+        if ( destx > myx )
+        {
+            if ( hf->mclass == MC_RESP)
+                possible_out_vcs.push_back(3);
+            else
+                possible_out_vcs.push_back(2);
+        }
+        else
+        {
+            if ( hf->mclass == MC_RESP)
+                possible_out_vcs.push_back(1);
+            else
+                possible_out_vcs.push_back(0);
+        }
+
+        return;
+    }
+
+    assert(0); //should not reach here
+}
+#endif
 
 /* not used
 // this routes unidirectional
@@ -277,6 +479,13 @@ GenericRC::push (Flit* f, uint ch )
         if( rc_method == TORUS_ROUTING)
         {
             route_torus( header );
+
+            assert ( possible_out_ports.size() == 1);
+            assert ( possible_out_vcs.size() == 1);
+        }
+        else if( rc_method == TORUS6P_ROUTING)
+        {
+            route_torus6p( header );
 
             assert ( possible_out_ports.size() == 1);
             assert ( possible_out_vcs.size() == 1);

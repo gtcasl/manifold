@@ -1,6 +1,7 @@
 #ifndef MANIDOLD_DRAM_SIM_H
 #define MANIDOLD_DRAM_SIM_H
 
+
 #include "kernel/component-decl.h"
 #include "uarch/DestMap.h"
 #include "uarch/networkPacket.h"
@@ -24,14 +25,15 @@ namespace dramsim {
 struct Dram_sim_settings {
     Dram_sim_settings(const char* dev, const char* sys, int sz, bool st_resp, int credits) :
         dev_filename(dev), mem_sys_filename(sys), size(sz), send_st_resp(st_resp),
-	downstream_credits(credits)
-	{}
+    downstream_credits(credits)
+    {}
     const char* dev_filename;           // contains settings of the DRAM device
-    const char* mem_sys_filename;       // Contains settings of the whole memory       
-    int size;			        // Memory size in MB
-    //unsigned local_map;	                // Type of local address mapping
+    const char* mem_sys_filename;       // Contains settings of the whole memory
+    int size;                   // Memory size in MB
+    //unsigned local_map;                   // Type of local address mapping
     bool send_st_resp;                  // whether responses are sent for stores
-    int downstream_credits;             
+    int downstream_credits;
+    //    manifold::uarch::DestMap* mc_map;
 };
 
 
@@ -41,11 +43,13 @@ public:
     enum {PORT0=0};
 
     Dram_sim(int nid, const Dram_sim_settings& dram_settings, manifold::kernel::Clock&);
-    ~Dram_sim() {};	 
+    ~Dram_sim() {};
 
     int get_nid() { return m_nid; }
 
-    template<typename T> 
+    void set_mc_map(manifold::uarch::DestMap *m);
+
+    template<typename T>
     void handle_incoming(int, manifold::uarch::NetworkPacket* req); // interface with NI
 
     void tick();        // registered with clock
@@ -67,14 +71,14 @@ public:
 private:
 #endif
     struct Request {
-        Request(uint64_t c, uint64_t a, bool r, void* e) : r_cycle(c), addr(a), read(r), extra(e) {}
-	uint64_t r_cycle; //cycle when the request is first received
-	uint64_t addr;
-	bool read;  //true for read; false for write
-	void* extra; //this is used to store the NetworkPacket for reuse when sending response.
-	             //use void* so it can be used for other purposes.
+        Request(uint64_t c, uint64_t a, uint64_t g, bool r, void* e) : r_cycle(c), addr(a), gaddr(g), read(r), extra(e) {}
+        uint64_t r_cycle; //cycle when the request is first received
+        uint64_t addr; //local address
+        uint64_t gaddr; //global address
+        bool read;   //true for read; false for write
+        void* extra; //this is used to store the NetworkPacket for reuse when sending response.
+                     //use void* so it can be used for other purposes.
     };
-
 
     static int MEM_MSG_TYPE;
     static int CREDIT_MSG_TYPE;
@@ -85,15 +89,17 @@ private:
     bool m_send_st_response;  // send response for stores
     int downstream_credits;     // NI credits`
 
-    MultiChannelMemorySystem *mem;  // the original DRAMSim object        
+    MultiChannelMemorySystem *mem;  // the original DRAMSim object
 
-    std::list<Request> m_incoming_reqs;	        // input buffer 
+    manifold::uarch::DestMap *mc_map;
+
+    std::list<Request> m_incoming_reqs;         // input buffer
     std::list<Request> m_completed_reqs;  // output buffer
     std::map<uint64_t, std::list<Request> > m_pending_reqs;    // buffer holding active requests,
                                                                // i.e., requests being processed
 
     /* create and register our callback functions */
-    Callback_t *read_cb; 
+    Callback_t *read_cb;
     Callback_t *write_cb;
     Callback_t *power_cb;
 
@@ -114,7 +120,7 @@ private:
     std::map<int, unsigned> stats_n_writes_per_source;
 
 #ifdef DRAMSIM_UTEST
-    unsigned completed_writes; 
+    unsigned completed_writes;
 #endif
 };
 
@@ -124,39 +130,41 @@ template<typename T>
 void Dram_sim :: handle_incoming(int, manifold::uarch::NetworkPacket* pkt)
 {
     if (pkt->type == CREDIT_MSG_TYPE) {
-	downstream_credits++;
-	delete pkt;
-	return;
+    downstream_credits++;
+    delete pkt;
+    return;
     }
-        
+
     assert (pkt->dst == m_nid);
 
     T* req = (T*)(pkt->data);
 
     if (req->is_read()) {
-	stats_n_reads++;
-	stats_n_reads_per_source[pkt->get_src()]++;
+    stats_n_reads++;
+    stats_n_reads_per_source[pkt->get_src()]++;
 #ifdef DBG_DRAMSIM
 cout << "@ " << m_clk->NowTicks() << " >>> mc " << m_nid << " received LD, src= " << pkt->get_src() << " addr= " <<hex<< req->get_addr() <<dec<<endl;
 #endif
     }
     else {
-	stats_n_writes++;
-	stats_n_writes_per_source[pkt->get_src()]++;
+    stats_n_writes++;
+    stats_n_writes_per_source[pkt->get_src()]++;
 #ifdef DBG_DRAMSIM
 cout << "@ " << m_clk->NowTicks() << " >>> mc " << m_nid << " received ST, src= " << pkt->get_src() << " addr= " <<hex<< req->get_addr() <<dec<<endl;
 #endif
     }
 
-	//paddr_t newAddr = m_mc_map->ripAddress(req->addr);
+    //paddr_t newAddr = m_mc_map->ripAddress(req->addr);
 
     pkt->set_dst(pkt->get_src());
     pkt->set_dst_port(pkt->get_src_port());
     pkt->set_src(m_nid);
     pkt->set_src_port(0);
-	
+    pkt->type = 9;
+
+    assert(mc_map);
     //put the request in the input buffer
-    m_incoming_reqs.push_back(Request(m_clk->NowTicks(), req->get_addr(), req->is_read(), pkt));
+    m_incoming_reqs.push_back(Request(m_clk->NowTicks(), mc_map->get_local_addr(req->get_addr()), req->get_addr(), req->is_read(), pkt));
 
 }
 
@@ -167,4 +175,3 @@ cout << "@ " << m_clk->NowTicks() << " >>> mc " << m_nid << " received ST, src= 
 } // namespace manifold
 
 #endif
-

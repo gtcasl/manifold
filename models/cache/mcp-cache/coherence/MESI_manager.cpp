@@ -122,6 +122,7 @@ void MESI_manager :: process(int msg_type, int src_id)
             break;
         case MESI_MNG_EI_EVICT:
             do_EI_EVICT(msg);
+
             break;
         case MESI_MNG_ES:
             do_ES(msg, src_id);

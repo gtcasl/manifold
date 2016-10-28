@@ -18,35 +18,35 @@ class hash_set;
 class hash_table;
 
 class hash_entry {
-    public:
-        hash_entry (hash_set *hset, unsigned idx);
-        ~hash_entry (void);
+public:
+    hash_entry (hash_set *hset, unsigned idx);
+    ~hash_entry (void);
 
-	unsigned get_idx() { return idx; }
-	unsigned get_set_idx();
+    unsigned get_idx() { return idx; }
+    unsigned get_set_idx();
 
-        bool get_have_data() const { return have_data; }
-        void set_have_data(bool h) { have_data = h; }
+    bool get_have_data() const { return have_data; }
+    void set_have_data(bool h) { have_data = h; }
 
-	void set_dirty(bool d) { dirty = d; }
-	bool is_dirty() { return dirty; }
+    void set_dirty(bool d) { dirty = d; }
+    bool is_dirty() { return dirty; }
 
-	void invalidate ();
+    void invalidate ();
 
-	paddr_t get_line_addr();
+    paddr_t get_line_addr();
 
 #ifndef MCP_CACHE_UTEST
     private:
 #endif
-        friend class hash_set;
-        friend class hash_table;
+    friend class hash_set;
+    friend class hash_table;
 
-        hash_set * const my_set;
-	const unsigned idx; //index within the whole table.
-        paddr_t tag;
-        bool free;
-        bool have_data;
-        bool dirty;
+    hash_set * const my_set;
+    const unsigned idx; //index within the whole table.
+    paddr_t tag;
+    bool free;
+    bool have_data;
+    bool dirty;
 };
 
 
@@ -122,9 +122,9 @@ class hash_table {
       unsigned get_occupancy() { return occupancy; }
       void increase_occupancy() { occupancy++; }
       void decrease_occupancy()
-      { 
+      {
           assert(occupancy > 0);
-	  occupancy--;
+          occupancy--;
       }
 
       //debug

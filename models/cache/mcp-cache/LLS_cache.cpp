@@ -57,7 +57,11 @@ void LLS_cache :: tick()
 void LLS_cache :: send_msg_to_l1(Coh_msg* msg)
 {
     msg->src_id = node_id;
-    msg->dst_port = LLP_cache :: LLP_ID;
+    msg->dst_port = manifold::uarch::LLP_ID;
+
+    assert(l2_map);
+    if (l2_map->get_page_offset_bits() > my_table->get_offset_bits())
+        msg->addr = l2_map->get_global_addr(msg->addr, node_id);
 
     DBG_LLS_CACHE_ID(cout,  " sending msg= " << msg->msg << " to L1 node= " << msg->dst_id << " fwd= " << msg->forward_id << endl);
 
@@ -67,7 +71,7 @@ void LLS_cache :: send_msg_to_l1(Coh_msg* msg)
 	NetworkPacket* pkt = new NetworkPacket;
 	pkt->type = COH_MSG;
 	pkt->src = node_id;
-	pkt->src_port = LLP_cache :: LLS_ID;
+	pkt->src_port = manifold::uarch::LLS_ID;
 	pkt->dst = msg->dst_id;
 	pkt->dst_port = msg->dst_port;
 	*((Coh_msg*)(pkt->data)) = *msg;
@@ -86,10 +90,16 @@ void LLS_cache::get_from_memory (Coh_msg *request)
 {
     Mem_msg req;
     req.type = Mem_msg :: MEM_REQ;
-    req.addr = request->addr;
+
+    assert(l2_map);
+    if (l2_map->get_page_offset_bits() > my_table->get_offset_bits())
+        req.addr = l2_map->get_global_addr(request->addr, node_id);
+    else
+        req.addr = request->addr;
+
     req.op_type = OpMemLd;
     req.src_id = node_id;
-    req.src_port = LLP_cache :: LLS_ID;
+    req.src_port = manifold::uarch::LLS_ID;
     req.dst_id = mc_map->lookup(request->addr);
 
     DBG_LLS_CACHE_ID(cout,  " get from memory node " << req.dst_id << " for 0x" << hex << req.addr << dec << endl);
@@ -97,8 +107,9 @@ void LLS_cache::get_from_memory (Coh_msg *request)
     NetworkPacket* pkt = new NetworkPacket;
     pkt->type = MEM_MSG;
     pkt->src = node_id;
-    pkt->src_port = LLP_cache :: LLS_ID;
+    pkt->src_port = manifold::uarch::LLS_ID;
     pkt->dst = req.dst_id;
+    pkt->dst_port = manifold::uarch::MEM_ID;
 
     *((Mem_msg*)(pkt->data)) = req;
     pkt->data_size = sizeof(Mem_msg);
@@ -119,17 +130,24 @@ void LLS_cache::dirty_to_memory (paddr_t addr)
 
     Mem_msg req;
     req.type = Mem_msg :: MEM_REQ;
-    req.addr = addr;
+
+    assert(l2_map);
+    if (l2_map->get_page_offset_bits() > my_table->get_offset_bits())
+        req.addr = l2_map->get_global_addr(addr, node_id);
+    else
+        req.addr = addr;
+
     req.op_type = OpMemSt;
     req.src_id = node_id;
-    req.src_port = LLP_cache :: LLS_ID;
+    req.src_port = manifold::uarch::LLS_ID;
     req.dst_id = mc_map->lookup(addr);
 
     NetworkPacket* pkt = new NetworkPacket;
     pkt->type = MEM_MSG;
     pkt->src = node_id;
-    pkt->src_port = LLP_cache :: LLS_ID;
+    pkt->src_port = manifold::uarch::LLS_ID;
     pkt->dst = req.dst_id;
+    pkt->dst_port = manifold::uarch::MEM_ID;
 
     *((Mem_msg*)(pkt->data)) = req;
     pkt->data_size = sizeof(Coh_msg);

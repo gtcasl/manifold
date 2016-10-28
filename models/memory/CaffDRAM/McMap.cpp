@@ -12,24 +12,25 @@ CaffDramMcMap :: CaffDramMcMap(std::vector<int>& nodeIds, const Dsettings& sett)
 {
     assert(nodeIds.size() > 0);
 
+    mc_selector_bits = 0;
+
     if(nodeIds.size() > 1) {
 	//Determine the number of bits required to select the MC nodes.
-	int mc_selector_bits = 0;
-	while((0x1 << mc_selector_bits) < (int)nodeIds.size()) {
-	    mc_selector_bits++;
-	}
+        while((0x1 << mc_selector_bits) < (int)nodeIds.size()) {
+            mc_selector_bits++;
+        }
 
-	assert((0x1 << mc_selector_bits) == nodeIds.size()); //number of MCs must be a power of 2
+        assert((0x1 << mc_selector_bits) == nodeIds.size()); //number of MCs must be a power of 2
 
-	m_mc_selector_mask = (0x1 << mc_selector_bits) - 1;
+        m_mc_selector_mask = (0x1 << mc_selector_bits) - 1;
 
-	//Determine the number of bits required to select channel.
-	int ch_bits = 0;
-	while((0x1 << ch_bits) < (int)sett.numChannels) {
-	    ch_bits++;
-	}
+        //Determine the number of bits required to select channel.
+        int ch_bits = 0;
+        while((0x1 << ch_bits) < (int)sett.numChannels) {
+            ch_bits++;
+        }
 
-	m_mc_shift_bits = sett.channelShiftBits + ch_bits;
+        m_mc_shift_bits = sett.channelShiftBits + ch_bits;
     }
 
 }
@@ -48,6 +49,17 @@ int CaffDramMcMap :: lookup(uint64_t addr)
     }
 }
 
+uint64_t CaffDramMcMap :: get_local_addr(uint64_t addr)
+{
+    if(m_nodeIds.size() == 1) {
+        return addr;
+    } else {
+        uint64_t up_addr = addr >> (m_mc_shift_bits + mc_selector_bits);
+        uint64_t lo_addr = addr & m_mc_shift_bits;
+
+        return (up_addr << m_mc_shift_bits) | lo_addr;
+    }
+}
 
 
 

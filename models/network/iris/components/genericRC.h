@@ -75,6 +75,7 @@ class GenericRC
         //std::string name;
         void route_twonode( HeadFlit* hf );
         void route_torus( HeadFlit* hf );
+        void route_torus6p( HeadFlit* hf );
         void route_ring( HeadFlit* hf );
         //uint route_x_y( uint addr );
         //void route_ring_uni( HeadFlit* hf );
