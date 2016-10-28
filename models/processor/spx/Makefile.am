@@ -28,4 +28,4 @@ pkginclude_spx_HEADERS = \
 	core.h \
     qsim-proxy.h
 
-libspx_a_CPPFLAGS = -I$(KERNEL_INC) -I$(QSIM_INC) -Ipipeline -lqsim -lqsim-client
+libspx_a_CPPFLAGS = -I$(KERNEL_INC) -I$(QSIM_INC) -I$(KITFOX_INC) -Ipipeline -lqsim -lqsim-client

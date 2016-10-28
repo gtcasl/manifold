@@ -34,6 +34,10 @@ SysBuilder_llp :: SysBuilder_llp(const char* fname)
     m_mc_builder = 0;
     m_qsim_builder = 0;
 
+#ifdef LIBKITFOX
+    m_kitfox_builder = 0;
+#endif
+
     m_qsim_osd = 0;
 
     m_default_clock = 0;
@@ -80,8 +84,23 @@ void SysBuilder_llp :: config_components()
             //if default clock not defined
             m_DEFAULT_CLOCK_FREQ = -1;
         }
-
-
+#ifdef LIBKITFOX
+        //kitfox
+        try {
+            const char* kitfox_chars = m_config.lookup("kitfox_config");
+            uint64_t sampling_freq = m_config.lookup("kitfox_freq");
+            m_kitfox_builder = new KitFoxBuilder(kitfox_chars, sampling_freq);
+            if(m_kitfox_builder == NULL)
+            {
+                    cerr << "KitFox config  " << kitfox_chars << "  contains errors\n";
+                    exit(1);
+            }
+        }
+        catch (SettingNotFoundException e) {
+            cerr << "KitFox config file not specified\n";
+            exit(1);
+        }
+#endif
         //network
         try {
             const char* net_chars = m_config.lookup("network_type");
@@ -199,7 +218,7 @@ void SysBuilder_llp :: build_system(FrontendType type, int n_lps, vector<string>
 {
     assert(m_conf_read == true);
 
-    // create default clock
+    // create default clock, this is the Master Clock
     m_default_clock = 0;
     if(m_DEFAULT_CLOCK_FREQ > 0)
         m_default_clock = new Clock(m_DEFAULT_CLOCK_FREQ);
@@ -211,6 +230,10 @@ void SysBuilder_llp :: build_system(FrontendType type, int n_lps, vector<string>
 
     //??????????????? todo: network should be able to use different clock
     m_network_builder->create_network(*m_default_clock, part);
+
+#ifdef LIBKITFOX
+    m_kitfox_builder->create_proxy();
+#endif
 
     assert(m_proc_builder->get_fe_type() == ProcBuilder::INVALID_FE_TYPE);
     switch(type) {
@@ -242,7 +265,7 @@ void SysBuilder_llp :: build_system(Qsim::OSDomain* qsim_osd, vector<string>& ar
 {
     assert(m_conf_read == true);
 
-    // create default clock
+    // create default clock, this is the Master Clock
     m_default_clock = 0;
     if(m_DEFAULT_CLOCK_FREQ > 0)
         m_default_clock = new Clock(m_DEFAULT_CLOCK_FREQ);
@@ -254,6 +277,10 @@ void SysBuilder_llp :: build_system(Qsim::OSDomain* qsim_osd, vector<string>& ar
 
     //??????????????? todo: network should be able to use different clock
     m_network_builder->create_network(*m_default_clock, PART_1);
+
+#ifdef LIBKITFOX
+    m_kitfox_builder->create_proxy();
+#endif
 
     assert(m_proc_builder->get_fe_type() == ProcBuilder::INVALID_FE_TYPE);
     m_proc_builder->set_fe_type(ProcBuilder::QSIMLIB);
@@ -271,7 +298,7 @@ void SysBuilder_llp :: build_system(vector<string>& args, const char *stateFile,
 {
     assert(m_conf_read == true);
 
-    // create default clock
+    // create default clock, this is the Master Clock
     m_default_clock = 0;
     if(m_DEFAULT_CLOCK_FREQ > 0)
         m_default_clock = new Clock(m_DEFAULT_CLOCK_FREQ);
@@ -283,6 +310,10 @@ void SysBuilder_llp :: build_system(vector<string>& args, const char *stateFile,
 
     //??????????????? todo: network should be able to use different clock
     m_network_builder->create_network(*m_default_clock, PART_1);
+
+#ifdef LIBKITFOX
+    m_kitfox_builder->create_proxy();
+#endif
 
     assert(m_proc_builder->get_fe_type() == ProcBuilder::INVALID_FE_TYPE);
     m_proc_builder->set_fe_type(ProcBuilder::QSIMPROXY);
@@ -389,6 +420,24 @@ void SysBuilder_llp :: create_qsimproxy_nodes(vector<string>& args, const char* 
     m_qsim_builder->create_qsim(0);
 
     switch(m_proc_builder->get_proc_type()) {
+       /* case ProcBuilder::PROC_ZESTO: {*/
+            //if(args.size() != 0) {
+                //cerr << "Zesto core needs:  [no arguments]\n";
+                //exit(1);
+            //}
+            //Zesto_builder* z = dynamic_cast<Zesto_builder*>(m_proc_builder);
+            //assert(z);
+            //break;
+        //}
+        //case ProcBuilder::PROC_SIMPLE: {
+            //if(args.size() != 0) {
+                //cerr << "SimpleProc core needs:  [no arguments]\n";
+                //exit(1);
+            //}
+            //Simple_builder* s = dynamic_cast<Simple_builder*>(m_proc_builder);
+            //assert(s);
+            //break;
+       /* }*/
         case ProcBuilder::PROC_SPX: {
             if(args.size() != 0) {
                 cerr << "SPX core needs:  [no arguments]\n";
@@ -506,7 +555,7 @@ void SysBuilder_llp :: do_partitioning_1_part(int n_lps)
             m_node_conf[i].type = MC_NODE;
             m_node_conf[i].lp = 0;
             mc_id_lp_map[i] = m_node_conf[i].lp;
-                flag = true;
+            flag = true;
         }
         if(proc_node_idx_set.find(i) != proc_node_idx_set.end()) {
           if (mc_node_idx_set.find(i) != mc_node_idx_set.end()) {
@@ -542,7 +591,7 @@ void SysBuilder_llp :: do_partitioning_y_part(int n_lps)
             m_node_conf[i].type = MC_NODE;
             m_node_conf[i].lp = i/x_dim;
             mc_id_lp_map[i] = m_node_conf[i].lp;
-                flag = true;
+            flag = true;
         }
         if(proc_node_idx_set.find(i) != proc_node_idx_set.end()) {
           if (mc_node_idx_set.find(i) != mc_node_idx_set.end()) {
@@ -583,7 +632,6 @@ void SysBuilder_llp :: dep_injection_for_mcp()
         m_cache_builder->set_mc_map_obj(mc_map);
         m_mc_builder->set_mc_map_obj(mc_map);
     }
-
 }
 
 
@@ -614,6 +662,12 @@ void SysBuilder_llp :: connect_components()
     m_proc_builder->connect_proc_cache(m_cache_builder);
     m_cache_builder->connect_cache_network(m_network_builder);
     m_mc_builder->connect_mc_network(m_network_builder);
+
+#ifdef LIBKITFOX
+    if(m_kitfox_builder){
+        m_proc_builder->connect_proc_kitfox_proxy(m_kitfox_builder);
+    }
+#endif
 }
 
 

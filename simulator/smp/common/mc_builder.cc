@@ -122,9 +122,9 @@ void CaffDRAM_builder :: set_mc_map_obj(manifold::uarch::DestMap *mc_map)
     for(map<int, int>::iterator it = m_mc_id_cid_map.begin(); it != m_mc_id_cid_map.end(); ++it) {
         int node_id = (*it).first;
         Controller* mc = manifold::kernel::Component :: GetComponent<Controller>(m_mc_id_cid_map[node_id]);
-        assert(mc);
 
-        mc->set_mc_map(m);
+        if (mc)
+            mc->set_mc_map(m);
     }
 }
 
@@ -300,9 +300,9 @@ void DramSim_builder :: set_mc_map_obj(manifold::uarch::DestMap *mc_map)
     for(map<int, int>::iterator it = m_mc_id_cid_map.begin(); it != m_mc_id_cid_map.end(); ++it) {
         int node_id = (*it).first;
         Dram_sim* mc = manifold::kernel::Component :: GetComponent<Dram_sim>(m_mc_id_cid_map[node_id]);
-        assert(mc);
 
-        mc->set_mc_map(mc_map);
+        if (mc)
+            mc->set_mc_map(mc_map);
     }
 }
 

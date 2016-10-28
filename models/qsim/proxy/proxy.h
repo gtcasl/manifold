@@ -10,9 +10,9 @@
 #define QSIM_OVERHEAD   0.2
 #define QSIM_PROXY_QUEUE_SIZE (int)(5 * QSIM_RUN_GRANULARITY * (1 + QSIM_OVERHEAD))
 
-//#define DEBUG_NEW_QSIM 1 
-//#define DEBUG_NEW_QSIM_1 1 
-//#define DEBUG_NEW_QSIM_2 1 
+//#define DEBUG_NEW_QSIM 1
+//#define DEBUG_NEW_QSIM_1 1
+//#define DEBUG_NEW_QSIM_2 1
 
 namespace manifold {
 namespace qsim_proxy {
@@ -34,7 +34,7 @@ public:
 
     /* Function that processes fetch requests from cores */
     template <typename T> void handle_core_request(int temp, T *CoreRequest);
-    
+
 private:
     Qsim::OSDomain *qsim_osd;
     std::vector<Qsim::QueueItem> buffer;
@@ -56,7 +56,7 @@ void qsim_proxy_t::handle_core_request(int temp, T *CoreRequest)
 #if  defined(DEBUG_NEW_QSIM_2) || defined(DEBUG_NEW_QSIM_1)
         std::cerr << "( core: " << std::dec << core_id << " ) | inst " << std::dec << rc << " tid "  << qsim_osd->get_tid(core_id) << " idle " << qsim_osd->idle(core_id) << " buffer " << buffer.size() << std::endl << std::flush;
 #endif
- 
+
         if(!rc) {
             Qsim::QueueItem queue_item;
             assert(buffer.size() == 0);
@@ -83,7 +83,7 @@ void qsim_proxy_t::handle_core_request(int temp, T *CoreRequest)
                 //CoreRequest->push_back(*(buffer.begin()));
                 //buffer.erase(buffer.begin());
             //}
-            
+
             if (qsim_osd->idle(core_id) || (buffer.size() == 0)) {
                 //assert(buffer.size() == 0);
                 Qsim::QueueItem queue_item;
@@ -98,7 +98,7 @@ void qsim_proxy_t::handle_core_request(int temp, T *CoreRequest)
 #ifdef DEBUG_NEW_QSIM
                 std::cerr << "( core: " << std::dec << core_id << " ) cbs: " << buffer.size() << " | " << std::flush;
 #endif
-                
+
                 std::vector<Qsim::QueueItem>::size_type sz = buffer.size();
                 std::vector<Qsim::QueueItem>::size_type offset = 0;
                 while ( sz > QSIM_PROXY_QUEUE_SIZE ) {
@@ -136,7 +136,7 @@ void qsim_proxy_t::handle_core_request(int temp, T *CoreRequest)
 
     buffer.clear();
 #ifdef DEBUG_NEW_QSIM_1
-    std::cerr << "( Core " << std::dec << CoreRequest->get_core_id() << " ) [receive request from qsim] | " << std::dec << CoreRequest->get_queue_size() << std::endl << std::flush;
+    std::cerr << "( Core " << std::dec << CoreRequest->get_core_id() << " ) [receive request from qsim] | " << std::dec << CoreRequest->get_queue_size() << " @ " << m_clk->NowTicks() << std::endl << std::flush;
 #endif
     Send(CoreRequest->get_port_id(), CoreRequest);
 }

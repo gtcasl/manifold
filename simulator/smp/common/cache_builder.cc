@@ -88,7 +88,10 @@ void MCP_lp_lls_builder :: create_caches(Clock& clk)
         int lp = (*it).second;
         LP_LLS_unit* unit = new LP_LLS_unit(lp, node_id, l1_cache_parameters, l2_cache_parameters, l1_settings, l2_settings, clk, clk, clk, m_CREDIT_MSG_TYPE);
 
-        unit->get_llp()->set_l2_map(l2_map);
+        if (unit->get_llp())
+            unit->get_llp()->set_l2_map(l2_map);
+
+        if (unit->get_lls())
         unit->get_lls()->set_l2_map(l2_map);
 
         m_caches[node_id] = unit;
@@ -100,7 +103,8 @@ void MCP_lp_lls_builder :: set_mc_map_obj(manifold::uarch::DestMap* mc_map)
 {
     for(map<int, LP_LLS_unit*>::iterator it = m_caches.begin(); it != m_caches.end(); ++it) {
         LP_LLS_unit* unit = (*it).second;
-        unit->get_lls()->set_mc_map(mc_map);
+        if (unit->get_lls())
+            unit->get_lls()->set_mc_map(mc_map);
     }
 }
 

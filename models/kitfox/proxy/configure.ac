@@ -3,8 +3,8 @@
 
 AC_PREREQ([2.59])
 AC_INIT([FULL-PACKAGE-NAME], [VERSION], [BUG-REPORT-ADDRESS])
-AM_INIT_AUTOMAKE([manifold_spx], [1.0])
-AC_CONFIG_SRCDIR([core.h])
+AM_INIT_AUTOMAKE([manifold_kitfox_proxy], [1.0])
+AC_CONFIG_SRCDIR([kitfox_proxy.h])
 #AC_CONFIG_HEADERS([config.h])
 
 # Checks for programs.
@@ -61,61 +61,7 @@ fi
 AC_SUBST([KERNEL_INC], [$KERINC])
 
 
-# spx uses cache_req from mcp-cache. If this dependency changes,
-# the following should also change.
-
-    if test -d "$srcdir/../../../models/cache/mcp-cache"; then
-	SIMPCACHEINC='$(top_srcdir)/../../../models/cache'
-	AC_MSG_NOTICE([
-    -----------------------------------------------
-    Use mcp-cache header files in super-project.
-    -----------------------------------------------
-	])
-    else
-	# simply set the value. I can't check if it's really there.
-	SIMPCACHEINC='$(includedir)/mcp-cache'
-	AC_MSG_NOTICE([
-    --------------------------------------------------------
-    Use mcp-cache header files in installation direcotry.
-    --------------------------------------------------------
-	])
-    fi
-
-
-AC_SUBST([MCPCACHE_INC], [$SIMPCACHEINC])
-
-
-# use QSim by default
-AC_ARG_WITH([qsim],
-    [AS_HELP_STRING([--without-qsim],
-        [do not use QSim @<:@default: no@:>@])],
-    [qsim=${enableval}], [qsim=yes])
-
-if test "x${qsim}" = xyes ; then
-    #check if QSim header files exist
-    # We allow user to specify the location of the header files, e.g.,
-    # configure QSIMINC=/foo/qsim
-    if test -z "$QSIMINC" ; then
-	QSIMINC='/usr/local/include'
-    fi
-
-    if test ! -e "$QSIMINC/qsim.h"; then
-	AC_MSG_ERROR([
-    -----------------------------------------
-    ERROR: qsim.h not found in $QSIMINC!
-    -----------------------------------------
-	])
-    else
-	AC_DEFINE(USE_QSIM)
-	AC_SUBST([QSIM_INC], [$QSIMINC])
-    fi
-else # use_qsim disabled
-    AC_MSG_WARN([
-    -----------------------------------------------------------------
-    USE_QSIM disabled! Building only processor models not using QSim.
-    -----------------------------------------------------------------])
-fi
-
+# use Kitfox by default
 AC_ARG_WITH([kitfox],
     [AS_HELP_STRING([--without-kitfox],
         [do not use QSim @<:@default: no@:>@])],
@@ -136,15 +82,14 @@ if test "x${kitfox}" = xyes ; then
     -----------------------------------------
 	])
     else
-	AC_DEFINE(LIBKITFOX)
+	AC_DEFINE(USE_KITFOX)
 	AC_SUBST([KITFOX_INC], [$KITFOXINC])
     fi
 else # use_kitfox disabled
     AC_MSG_WARN([
     -----------------------------------------------------------------
-    LIBKITFOX disabled! Building only processor models not using KitFox.
+    USE_KITFOX disabled! Building only processor models not using KitFox.
     -----------------------------------------------------------------])
-	AC_SUBST([KITFOX_INC], ["."])
 fi
 
 

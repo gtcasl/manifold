@@ -5,5 +5,5 @@ manifolduarchincdir = $(includedir)/manifold/uarch
 manifolduarchinc_HEADERS = \
 	DestMap.h \
 	memMsg.h \
-	networkPacket.h
-
+	networkPacket.h \
+	kitfoxCounter.h

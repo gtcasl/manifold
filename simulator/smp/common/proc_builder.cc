@@ -15,10 +15,18 @@ using namespace libconfig;
 using namespace manifold::kernel;
 //using namespace manifold::zesto;
 //using namespace manifold::simple_proc;
+using namespace std;
 using namespace manifold::spx;
 using namespace manifold::qsim_proxy;
 using namespace manifold::mcp_cache_namespace;
 using namespace manifold::qsim_interrupt_handler;
+
+#ifdef LIBKITFOX
+#include "kitfox_proxy.h"
+#include "kitfox_builder.h"
+using namespace manifold::kitfox_proxy;
+using namespace manifold::uarch;
+#endif
 
 
 void ProcBuilder :: print_config(std::ostream& out)
@@ -73,7 +81,7 @@ void Zesto_builder :: read_config(Config& config)
 		        m_CLOCK_FREQ[i] = (double)proc_clocks[i];
 
 	        m_use_default_clock = false;
-	    }   
+	    }
 	    catch (SettingNotFoundException e) {
 	        //clock not defined; use default
 	        m_use_default_clock = true;
@@ -502,10 +510,12 @@ void Spx_builder :: connect_proc_kitfox_proxy(KitFoxBuilder* kitfox_builder)
     for(map<int,int>::iterator it = m_proc_id_cid_map.begin(); it != m_proc_id_cid_map.end(); ++it) {
         int proc_cid = (*it).second;
 
-        //connect proc with qsim proxy
-        Manifold :: Connect(proc_cid, spx_core_t::OUT_TO_QSIM, &spx_core_t::handle_qsim_response,
-                            qsim_cid, proc_cid, &qsim_proxy_t::handle_core_request<manifold::spx::qsim_proxy_request_t>,
+        //connect proc with kitfox proxy
+        Manifold :: Connect(proc_cid, spx_core_t::OUT_TO_KITFOX, &spx_core_t::handle_kitfox_proxy_request<kitfox_proxy_request_t<manifold::uarch::pipeline_counter_t>>,
+                            kitfox_cid, proc_cid, &kitfox_proxy_t::handle_kitfox_proxy_response<manifold::uarch::pipeline_counter_t>,
                             Clock::Master(), Clock::Master(), 1, 1);
+        if (kitfox_builder->get_kitfox())
+            kitfox_builder->get_kitfox()->add_manifold_node(proc_cid);
     }
 }
 #endif

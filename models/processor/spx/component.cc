@@ -129,7 +129,7 @@ void instQ_t::push_back(inst_t *inst)
     if(inst->is_head) {
         if(pipeline->inst_tlb) { pipeline->inst_tlb->access(inst->op.vaddr,false); }
         if(pipeline->inst_cache) { pipeline->inst_cache->access(inst->op.paddr,false); }
-            
+
         pipeline->counter.latch_ic2ib.switching++; // inst_cache to instQ latch
         pipeline->counter.pc.switching++; // program counter
         pipeline->counter.inst_buffer.write++; // inst_buffer write
@@ -164,7 +164,7 @@ void instQ_t::pop_front() // It must be called after get_front().
 
     queue.erase(queue.begin());
     if(inst->is_tail) { occupancy--; }
-        
+
 #ifdef LIBKITFOX
     if(inst->is_head) {
         pipeline->counter.inst_buffer.read++;
@@ -184,10 +184,10 @@ void instQ_t::pop_front() // It must be called after get_front().
 
     if(inst->is_long_inst)
         pipeline->counter.uop_sequencer.switching++;
-        
+
     pipeline->counter.latch_id2uq.switching+=2; // decoder to queue latch (2 means decode depth) | outorder
     pipeline->counter.latch_id2iq.switching+=2; // decoder to queue latch (2 means decode depth) | inorder
-        
+
     if(inst->opcode == QSIM_INST_RET)
         pipeline->counter.ras.read++;
 
@@ -265,7 +265,7 @@ void ROB_t::update(inst_t *inst)
 void ROB_t::pop_front() // It must be called after get_front().
 {
     inst_t *inst = *queue.begin();
-    
+
 #ifdef SPX_DEBUG
     fprintf(stdout,"SPX_DEBUG (core %d) | %lu: ROB.pop_front (%d/%d) uop %lu (Mop %lu)\n",pipeline->core->core_id,pipeline->core->clock_cycle,queue.size()-1,size,inst->uop_sequence,inst->Mop_sequence);
 #endif
@@ -274,7 +274,7 @@ void ROB_t::pop_front() // It must be called after get_front().
     pipeline->counter.rob.read++;
     if(inst->dest_reg||inst->dest_flag||inst->dest_fpreg)
         pipeline->counter.latch_rob2reg.switching++;
-    if(inst->opcode == QSIM_INST_CALL) 
+    if(inst->opcode == QSIM_INST_CALL)
         pipeline->counter.ras.write++;
     if(inst->opcode == QSIM_INST_BR) {
         pipeline->counter.l1_local_predictor.write++;
@@ -294,7 +294,7 @@ bool ROB_t::is_available()
     if(!(queue.size() < size)) {
         inst_t *head_inst = *queue.begin();
         inst_t *tail_inst = *queue.rbegin();
-        fprintf(stdout,"SPX_DEBUG (core %d) | %lu: ROB full | head uop %lu (Mop %lu) | tail uop %lu (Mop %lu)\n",head_pipeline->core->core_id,head_pipeline->core->clock_cycle,head_inst->uop_sequence,head_inst->Mop_sequence,tail_inst->uop_sequence,tail_inst->Mop_sequence);
+        fprintf(stdout,"SPX_DEBUG (core %d) | %lu: ROB full | head uop %lu (Mop %lu) | tail uop %lu (Mop %lu)\n",pipeline->core->core_id,pipeline->core->clock_cycle,head_inst->uop_sequence,head_inst->Mop_sequence,tail_inst->uop_sequence,tail_inst->Mop_sequence);
     }
 #endif
 
@@ -355,7 +355,7 @@ void RS_t::push_back(inst_t *inst)
     // outorder
     //pipeline->counter.rs.search++; // Assume finding an empty entry is tedious
     pipeline->counter.rs.write++;
-     
+
     // inorder
     pipeline->counter.inst_queue.write++;
 #endif
@@ -444,7 +444,7 @@ void RS_t::pop_front(int port) // It must be called after get_front().
     pipeline->counter.issue_select.switching++; // Select ready insts
     pipeline->counter.rs.read++; // Read the selected, ready inst
     pipeline->counter.latch_rs2ex.switching++; // Latch from RS to EX
-    
+
     // inorder
     pipeline->counter.inst_queue.read++;
     pipeline->counter.latch_iq2ex.switching++;
@@ -459,7 +459,7 @@ void RS_t::update(inst_t *inst)
 
         if((dep_inst->src_dep.size() == 0)&&(dep_inst->port > -1)) { // Dependent inst is now ready to execute.
 #ifdef SPX_DEBUG
-            fprintf(stdout,"SPX_DEBUG (core %d) | %lu: RS.ready uop %lu (Mop %lu) free from uop %lu (Mop %lu)\n",dep_pipeline->core->core_id,dep_pipeline->core->clock_cycle,dep_inst->uop_sequence,dep_inst->Mop_sequence,inst->uop_sequence,inst->Mop_sequence);
+            fprintf(stdout,"SPX_DEBUG (core %d) | %lu: RS.ready uop %lu (Mop %lu) free from uop %lu (Mop %lu)\n",pipeline->core->core_id,pipeline->core->clock_cycle,dep_inst->uop_sequence,dep_inst->Mop_sequence,inst->uop_sequence,inst->Mop_sequence);
 #endif
 
             // Move dep_inst to ready queue.
@@ -471,7 +471,7 @@ void RS_t::update(inst_t *inst)
         // This access should update only the source operands of dependent insts, so it's an overestimation of power.
         pipeline->counter.rs.search++;
         pipeline->counter.rs.write++;
-        
+
         // inorder
         pipeline->counter.inst_queue.write++;
 #endif
@@ -570,7 +570,7 @@ void RF_t::resolve_dependency(inst_t *inst)
 #endif
         }
     }
-                    
+
     // reg dest dependency
     uint64_t dest_reg_mask = inst->dest_reg;
     for(int i = 0; dest_reg_mask > 0; dest_reg_mask = dest_reg_mask>>1, i++) {
@@ -600,7 +600,7 @@ void RF_t::resolve_dependency(inst_t *inst)
             inst->src_dep.insert(pair<uint64_t,inst_t*>(flags[i]->uop_sequence,flags[i]));
         }
     }
-    
+
     // flag dest dependency
     uint8_t dest_flag_mask = inst->dest_flag;
     for(int i = 0; dest_flag_mask > 0; dest_flag_mask = dest_flag_mask>>1, i++) {
@@ -643,7 +643,7 @@ void RF_t::resolve_dependency(inst_t *inst)
 #endif
                     fpregs[fpregs_stack_ptr] = NULL;
                     inst->src_fpreg |= (0x01<<fpregs_stack_ptr); // ST0
-                    if(--fpregs_stack_ptr < 0) fpregs_stack_ptr = (int)SPX_N_FPREGS-1; 
+                    if(--fpregs_stack_ptr < 0) fpregs_stack_ptr = (int)SPX_N_FPREGS-1;
                 }
 #ifdef LIBKITFOX
                 else
@@ -670,7 +670,7 @@ void RF_t::resolve_dependency(inst_t *inst)
                         pipeline->counter.rob.read++;
                         pipeline->counter.latch_rob2rs.switching++;
                     }
-#endif                    
+#endif
                     inst->src_fpreg |= (0x01<<fpregs_stack_ptr); // ST0
 
                     // ST1 src dependency
@@ -698,7 +698,7 @@ void RF_t::resolve_dependency(inst_t *inst)
                         inst->src_fpreg |= (0x01<<st1_ptr); // ST1
                     }
                 }
-                  
+
                 fpregs[fpregs_stack_ptr] = inst; // This inst now the latest producer of ST0.
                 inst->dest_fpreg |= (0x01<<fpregs_stack_ptr); // ST0
                 break;
@@ -708,7 +708,7 @@ void RF_t::resolve_dependency(inst_t *inst)
 
 #ifdef LIBKITFOX
     pipeline->counter.latch_rr2rs.switching++;
-#endif    
+#endif
 }
 
 void RF_t::writeback(inst_t *inst)
@@ -723,7 +723,7 @@ void RF_t::writeback(inst_t *inst)
             pipeline->counter.reg_int.write++;
 #endif
             // This reg is now free, no dependency exists
-            if(regs[i] == inst) { regs[i] = NULL; } 
+            if(regs[i] == inst) { regs[i] = NULL; }
         }
     }
 
@@ -737,7 +737,7 @@ void RF_t::writeback(inst_t *inst)
         if((dest_flag_mask&0x01)&&(flags[i] == inst))
             flags[i] = NULL;
     }
-    
+
     // Inst write fpreg.
     uint8_t dest_fpreg_mask = inst->dest_fpreg;
     for(int i = 0; dest_fpreg_mask > 0; dest_fpreg_mask = dest_fpreg_mask>>1, i++) {
@@ -890,7 +890,7 @@ void EX_t::pop_front(int excode)
             pipeline->counter.latch_ex_int2rob.switching += pipeline->config.FU_delay[excode];
             break;
         }
-        
+
         // inorder
         pipeline->counter.latch_ex2reg.switching++;
     }
@@ -936,7 +936,7 @@ void LDQ_t::push_back(inst_t *inst)
     // outorder
     //pipeline->counter.ldq.search++; // Assume finding an empty entry is tedious
     pipeline->counter.ldq.write++;
-    
+
     // inorder
     //pipeline->counter.lsq.search++; // Assume finding an empty entry is tedious
     pipeline->counter.lsq.write++;
@@ -959,7 +959,7 @@ void LDQ_t::pop(inst_t *inst)
     pipeline->counter.ldq.search++;
     pipeline->counter.ldq.read++;
     pipeline->counter.latch_ldq2rs.switching++;
-    
+
     // inorder
     pipeline->counter.lsq.search++;
     pipeline->counter.lsq.read++;
@@ -987,10 +987,10 @@ void LDQ_t::schedule(inst_t *inst)
 #ifdef LIBKITFOX
         // outorder
         // Data forwards from STQ to LDQ
-        pipeline->counter.stq.read++; 
+        pipeline->counter.stq.read++;
         pipeline->counter.ldq.write++;
         pipeline->counter.latch_stq2ldq.switching++;
-        
+
         // inorder
         pipeline->counter.lsq.read++;
         pipeline->counter.lsq.write++;
@@ -1009,7 +1009,7 @@ void LDQ_t::schedule(inst_t *inst)
 #ifdef LIBKITFOX
     // outorder
     pipeline->counter.ldq.search++;
-    
+
     // inorder
     pipeline->counter.lsq.search++;
 #endif
@@ -1028,23 +1028,23 @@ void LDQ_t::handle_cache()
         // Send cache request.
         cache_request_t *cache_request = new cache_request_t(inst,pipeline->core->core_id,pipeline->core->node_id,inst->data.paddr,SPX_MEM_LD);
         inst->memory_request_time_stamp = pipeline->core->clock_cycle;
-        
+
         if(pipeline->config.memory_deadlock_avoidance)
             outstanding.insert(pair<uint64_t,inst_t*>(inst->uop_sequence,inst));
-            
+
         pipeline->core->Send(pipeline->core->OUT_TO_DATA_CACHE,cache_request);
 
-#ifdef LIBKITFOX        
+#ifdef LIBKITFOX
         if(pipeline->data_tlb) pipeline->data_tlb->access(inst->data.vaddr,false);
 #endif
 
         outgoing.erase(it);
-        
+
 #ifdef LIBKITFOX
         // outorder
         pipeline->counter.ldq.read++;
         pipeline->counter.latch_ldq2dcache.switching++;
-        
+
         // inorder
         pipeline->counter.lsq.read++;
         pipeline->counter.latch_lsq2dcache.switching++;
@@ -1109,7 +1109,7 @@ void STQ_t::push_back(inst_t *inst)
     // outorder
     //pipeline->counter.stq.search++; // Assume finding an empty entry is tedious.
     pipeline->counter.stq.write++;
-    
+
     // inorder
     pipeline->counter.lsq.write++;
 #endif
@@ -1130,7 +1130,7 @@ void STQ_t::pop(inst_t *inst)
     // outorder
     pipeline->counter.stq.search++;
     pipeline->counter.stq.read++;
-    
+
     // inorder
     pipeline->counter.lsq.search++;
     pipeline->counter.lsq.read++;
@@ -1144,7 +1144,7 @@ void STQ_t::schedule(inst_t *inst)
 #ifdef LIBKITFOX
     // outorder
     pipeline->counter.stq.search++;
-    
+
     // inorder
     pipeline->counter.lsq.search++;
 #endif
@@ -1169,10 +1169,10 @@ void STQ_t::handle_cache()
         // Send cache request.
         cache_request_t *cache_request = new cache_request_t(inst,pipeline->core->core_id,pipeline->core->node_id,inst->data.paddr,SPX_MEM_ST);
         inst->memory_request_time_stamp = pipeline->core->clock_cycle;
-        
+
         if(pipeline->config.memory_deadlock_avoidance)
             outstanding.insert(pair<uint64_t,inst_t*>(inst->uop_sequence,inst));
-            
+
         pipeline->core->Send(pipeline->core->OUT_TO_DATA_CACHE,cache_request);
 
 #ifdef LIBKITFOX
@@ -1180,12 +1180,12 @@ void STQ_t::handle_cache()
 #endif
 
         outgoing.erase(outgoing_it);
-        
+
 #ifdef LIBKITFOX
         // outorder
         pipeline->counter.stq.read++;
         pipeline->counter.latch_stq2dcache.switching++;
-        
+
         // inorder
         pipeline->counter.lsq.read++;
         pipeline->counter.latch_lsq2dcache.switching++;
@@ -1235,10 +1235,10 @@ void STQ_t::store_forward(inst_t *inst)
 #ifdef LIBKITFOX
             // outorder
             // Data forwards from STQ to LDQ
-            pipeline->counter.stq.read++; 
+            pipeline->counter.stq.read++;
             pipeline->counter.ldq.write++;
             pipeline->counter.latch_stq2ldq.switching++;
-            
+
             // inorder
             pipeline->counter.lsq.read++;
             pipeline->counter.lsq.write++;
@@ -1270,7 +1270,7 @@ void STQ_t::mem_disamb_check(inst_t *inst)
     // outorder
     // Search STQ entries and compare tags
     pipeline->counter.stq.search++;
-    
+
     // inorder
     pipeline->counter.lsq.search++;
 #endif
