@@ -52,7 +52,7 @@ script:
     - make
     - cd ${MANIFOLD_DIR}/simulator/smp/QsimProxy
     - make -f Makefile.kitfox
-    - cd {MANIFOLD_DIR}
+    - cd ${MANIFOLD_DIR}
     - ./configure QSIMINC=${QSIM_PREFIX}/include --without-kitfox
     - make
     - cd ${MANIFOLD_DIR}/simulator/smp/QsimProxy
