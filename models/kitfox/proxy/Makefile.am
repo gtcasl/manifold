@@ -1,4 +1,4 @@
-CXX = mpic++ -g -Wall -O3
+CXX = mpic++ -g -Wall -O3 --std=c++11
 
 MAINTAINERCLEANFILES=aclocal.m4 config.log config.status configure COPYING depcomp \
 					INSTALL install-sh Makefile.in missing
