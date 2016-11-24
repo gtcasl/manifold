@@ -2,11 +2,18 @@
 *.a
 *.status
 *.log
+DBG_LOG*
+aclocal.m4
 .deps
 dep
 autom4te.cache
+depcomp
+install-sh
+missing
+compile
+Makefile.in
 Makefile
+configure
 smp_llp
 smp_l1l2
-DBG_LOG0
 
