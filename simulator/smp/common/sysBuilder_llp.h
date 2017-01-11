@@ -14,8 +14,12 @@
 #include "qsim_builder.h"
 #include "qsim.h"
 
+#ifdef LIBKITFOX
+#include "kitfox_builder.h"
+#endif
+
 // this data structure to hold a node's type and lp
-enum {INVALID_NODE=0, EMPTY_NODE, CORE_NODE, MC_NODE, L2_NODE};
+enum {INVALID_NODE=0, EMPTY_NODE, CORE_NODE, MC_NODE, CORE_MC_NODE, L2_NODE};
 
 struct Node_conf_llp {
     Node_conf_llp() : type(INVALID_NODE) {}
@@ -74,6 +78,10 @@ protected:
     MemControllerBuilder* m_mc_builder;
     QsimBuilder *m_qsim_builder;
 
+#ifdef LIBKITFOX
+    KitFoxBuilder *m_kitfox_builder;
+#endif
+
     Qsim::OSDomain *m_qsim_osd;
 
     int MAX_NODES;
@@ -98,6 +106,10 @@ private:
     void create_qsimlib_nodes(Qsim::OSDomain* qsim_osd, vector<string>& args);
     void create_qsimproxy_nodes(vector<string>& args, const char* stateFile, const char* appFile, int n_lps, int part);
     void create_trace_nodes(int n_lps, vector<string>& args, int part);
+
+#ifdef LIBKITFOX
+    void create_kitfoxproxy_nodes(const char* config);
+#endif
 
     void connect_components();
 

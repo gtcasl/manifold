@@ -6,7 +6,7 @@ MAINTAINERCLEANFILES=aclocal.m4 config.log config.status configure COPYING depco
 qsim_interrupt_handlerlib_LIBRARIES = libqsim_interrupt_handler.a
 qsim_interrupt_handlerlibdir = $(libdir)/manifold
 
-libqsim_interrupt_hanlder_a_SOURCES = \
+libqsim_interrupt_handler_a_SOURCES = \
 	interrupt_handler.cc
 
 pkginclude_qsim_interrupt_handlerdir = $(includedir)/manifold/interrupt_handler

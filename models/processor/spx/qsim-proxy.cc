@@ -24,8 +24,8 @@ void spx_qsim_proxy_t::handle_qsim_response(qsim_proxy_request_t *QsimProxyReque
 {
 #ifdef DEBUG_NEW_QSIM_1
     std::cerr << "******************" << std::endl << std::flush;
-    std::cerr << std::dec << pipeline->core->core_id << " recv: " << QsimProxyRequest->get_queue_size() << std::endl << std::flush;
-    std::vector<Qsim::QueueItem>::size_type sz = queue.size(); 
+    std::cerr << std::dec << pipeline->core->core_id << " recv: " << QsimProxyRequest->get_queue_size() << " @ " << pipeline->core->clock_cycle << std::endl << std::flush;
+    std::vector<Qsim::QueueItem>::size_type sz = queue.size();
     //QsimProxyRequest->dump_queue();
 #endif
     QsimProxyRequest->append_to(queue);
@@ -39,11 +39,11 @@ void spx_qsim_proxy_t::handle_qsim_response(qsim_proxy_request_t *QsimProxyReque
 #endif
 }
 
-int spx_qsim_proxy_t::run(int CoreID, unsigned InstCount) 
+int spx_qsim_proxy_t::run(int CoreID, unsigned InstCount)
 {
     unsigned inst_count = InstCount;
-    std::vector<QueueItem>::iterator it; 
-    
+    std::vector<QueueItem>::iterator it;
+
 
     for(it = queue.begin(); it != queue.end(); it++) {
         QueueItem queue_item = *it;
@@ -71,7 +71,7 @@ int spx_qsim_proxy_t::run(int CoreID, unsigned InstCount)
 #ifdef DEBUG_NEW_QSIM
     std::cerr << "*( core " << std::dec << queue_item.id << " ): MEM" << " | v: 0x" << std::hex << queue_item.data.mem.vaddr <<" p: 0x" << std::hex << queue_item.data.mem.paddr << (queue_item.data.mem.type == 0 ? " RD" : " WR") << std::endl << std::flush;
 #endif
- 
+
             pipeline->Qsim_mem_cb(CoreID,
                                   queue_item.data.mem.vaddr,
                                   queue_item.data.mem.paddr,
@@ -83,7 +83,7 @@ int spx_qsim_proxy_t::run(int CoreID, unsigned InstCount)
 #ifdef DEBUG_NEW_QSIM
     std::cerr << "*( core " << std::dec << queue_item.id << " ): REG" << " | regid: " << std::dec << queue_item.data.reg.reg <<"  size: " << std::dec << static_cast<uint16_t>(queue_item.data.reg.size) << (queue_item.data.reg.type == 0 ? " SRC" : " DST") << std::endl << std::flush;
 #endif
- 
+
             pipeline->Qsim_reg_cb(CoreID,
                                   queue_item.data.reg.reg,
                                   queue_item.data.reg.size,
@@ -98,7 +98,7 @@ int spx_qsim_proxy_t::run(int CoreID, unsigned InstCount)
             it++;
             break;
         }
-        else if(queue_item.cb_type == QueueItem::TERMINATED) { 
+        else if(queue_item.cb_type == QueueItem::TERMINATED) {
             if(inst_count != InstCount) { break; } /* loop exit */
 #ifdef DEBUG_NEW_QSIM
     std::cerr << "*( core " << std::dec << queue_item.id << " ): TERMINATED" << std::endl << std::flush;
@@ -124,4 +124,3 @@ int spx_qsim_proxy_t::run(int CoreID, unsigned InstCount)
 
     return (InstCount-inst_count); /* Return the number of processed instructions. */
 }
-

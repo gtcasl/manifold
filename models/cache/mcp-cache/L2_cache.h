@@ -19,7 +19,8 @@ namespace mcp_cache_namespace {
 
 struct L2_cache_settings {
 public:
-    manifold::uarch::DestMap* mc_map;
+    // manifold::uarch::DestMap* mc_map;
+    // manifold::uarch::DestMap* l2_map;
     unsigned mshr_sz; //mshr size
     int downstream_credits;
 };
@@ -45,6 +46,9 @@ public:
     void invalidate(ManagerInterface*);
     void ignore(ManagerInterface*);
 
+    void set_mc_map(manifold::uarch::DestMap *m);
+    void set_l2_map(manifold::uarch::DestMap *m);
+
     hash_entry* get_hash_entry_by_idx(unsigned idx) { return hash_entries[idx]; }
 
     void print_stats(std::ostream&);
@@ -52,8 +56,8 @@ public:
     static void Set_msg_types(int coh, int mem, int credit)
     {
         COH_MSG = coh;
-	MEM_MSG = mem;
-	CREDIT_MSG = credit;
+        MEM_MSG = mem;
+        CREDIT_MSG = credit;
     }
 private:
     void process_client_request (Coh_msg* request, bool first);
@@ -94,10 +98,11 @@ protected:
 
     int node_id;
     manifold::uarch::DestMap* mc_map;
+    manifold::uarch::DestMap* l2_map;
 
     hash_table *my_table;
     hash_table *mshr; /** Can view MSHRs as temporary blocks for use while an eviction is pending. Thus, a fully associative hash_table works great. */
-     
+
     std::vector<ManagerInterface*> managers;
     std::vector<hash_entry*> hash_entries; //allows mapping from manager to hash_entry
 
@@ -106,12 +111,12 @@ protected:
 
     struct Stall_buffer_entry {
         Coh_msg* req;
-	stall_type_t type;
-	manifold::kernel::Ticks_t time; //when it was stalled.
+    stall_type_t type;
+    manifold::kernel::Ticks_t time; //when it was stalled.
     };
 
-    //std::list<std::pair <Coh_mem_req *, stall_type_t> > stalled_client_req_buffer;    
-    std::list<Stall_buffer_entry> stalled_client_req_buffer;    
+    //std::list<std::pair <Coh_mem_req *, stall_type_t> > stalled_client_req_buffer;
+    std::list<Stall_buffer_entry> stalled_client_req_buffer;
 
     std::vector<Coh_msg*> mcp_stalled_req; //stalled request for each manager; with this, after a manager finishes a request, we can
                                                    //easily identify the stalled request in the stall buffer.
@@ -156,28 +161,28 @@ void L2_cache :: handle_incoming (int, manifold::uarch::NetworkPacket* pkt)
 {
     if(pkt->type == CREDIT_MSG) {
         delete pkt;
-	m_downstream_credits++;
-	assert(m_downstream_credits <= DOWNSTREAM_FULL_CREDITS);
-	try_send();
-	return;
+    m_downstream_credits++;
+    assert(m_downstream_credits <= DOWNSTREAM_FULL_CREDITS);
+    try_send();
+    return;
     }
 
     if(pkt->type == COH_MSG) {
         Coh_msg* coh = new Coh_msg;
-	*coh = *((Coh_msg*)pkt->data);
-	process_incoming_coh(coh);
+    *coh = *((Coh_msg*)pkt->data);
+    process_incoming_coh(coh);
     }
     else if(pkt->type == MEM_MSG) {
         T objT = *((T*)pkt->data);
-	Mem_msg* mem = new Mem_msg;
-	mem->type = Mem_msg :: MEM_RPLY;
-	mem->addr = objT.get_addr();
-	if(objT.is_read())
-	    mem->op_type = OpMemLd;
-	else
-	    mem->op_type = OpMemSt;
+    Mem_msg* mem = new Mem_msg;
+    mem->type = Mem_msg :: MEM_RPLY;
+    mem->addr = objT.get_addr();
+    if(objT.is_read())
+        mem->op_type = OpMemLd;
+    else
+        mem->op_type = OpMemSt;
 
-        process_mem_resp(mem);
+    process_mem_resp(mem);
     }
     else {
         assert(0);

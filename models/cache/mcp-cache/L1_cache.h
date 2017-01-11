@@ -18,7 +18,7 @@ namespace mcp_cache_namespace {
 
 struct L1_cache_settings {
 public:
-    manifold::uarch::DestMap* l2_map;
+    //    manifold::uarch::DestMap* l2_map;
     unsigned mshr_sz; //mshr size
     int downstream_credits;
 };
@@ -40,15 +40,12 @@ public:
 
     void handle_peer_and_manager_request (int, manifold::uarch::NetworkPacket* pkt)
     {
-	//may receive multiple credits, or one msg one credit
+    //may receive multiple credits, or one msg one credit
         //assert(m_net_requests.size() == 0);
-	m_net_requests.push_back(pkt);
+    m_net_requests.push_back(pkt);
     }
 
     void tick(); //called at rising edge of clock.
-
-
-
 
     virtual void send_msg_to_peer_or_l2(Coh_msg* msg);
 
@@ -56,10 +53,12 @@ public:
 
     void print_stats(std::ostream&);
 
+    void set_l2_map(manifold::uarch::DestMap *m);
+
     static void Set_msg_types(int coh, int credit)
     {
         COH_MSG = coh;
-	CREDIT_MSG = credit;
+        CREDIT_MSG = credit;
     }
 
 private:
@@ -92,7 +91,7 @@ private:
     //debug
     void print_mshr();
     void print_stall_buffer();
-     
+
 
 #ifdef MCP_CACHE_UTEST
 public:
@@ -122,24 +121,24 @@ protected:
     std::vector<Coh_msg*> mcp_stalled_um_req; //stalled upper manager request for each manager-client pairing, or in this case, each client;
 
     enum MCP_State {PROCESSING_LOWER, EVICTING}; //this is used in the case of request race when a
-                                                 //client in the middle of handling processor request 
-						 //gets a request from upper manager. The upper manager
-						 //request takes priority and after it's finished it may
-						 //have affected the previous request, so we need to
-						 //remember what we were doing.
+                                                 //client in the middle of handling processor request
+                         //gets a request from upper manager. The upper manager
+                         //request takes priority and after it's finished it may
+                         //have affected the previous request, so we need to
+                         //remember what we were doing.
     std::vector<MCP_State> mcp_state;
 
     struct Stall_buffer_entry {
         cache_req* req;
-	stall_type_t type;
-	manifold::kernel::Ticks_t time; //when it was stalled.
+    stall_type_t type;
+    manifold::kernel::Ticks_t time; //when it was stalled.
     };
 
     //std::list<std::pair <cache_req *, stall_type_t> > stalled_client_req_buffer; //holds requests waiting for client to finish.
     std::list<Stall_buffer_entry> stalled_client_req_buffer; //holds requests waiting for client to finish.
 
     //TODO: Reimplement with hierarchies
-    //LIST<pair <cache_req *, stall_type_t> > stalled_peer_message_buffer;    
+    //LIST<pair <cache_req *, stall_type_t> > stalled_peer_message_buffer;
 
 
     std::list<cache_req*> m_proc_requests; //store requests from processor
@@ -179,12 +178,12 @@ void L1_cache :: handle_processor_request(int, T* request)
 {
     //stats
     if(stalled_client_req_buffer.size() > stats_stall_buffer_max_size)
-	stats_stall_buffer_max_size = stalled_client_req_buffer.size();
+    stats_stall_buffer_max_size = stalled_client_req_buffer.size();
 
     if(request->is_read())
-	stats_processor_read_requests++;
+    stats_processor_read_requests++;
     else
-	stats_processor_write_requests++;
+    stats_processor_write_requests++;
 
     cache_req* req = new cache_req;
     req->addr = request->get_addr();

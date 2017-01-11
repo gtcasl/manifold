@@ -76,7 +76,7 @@ void MuxDemux :: handle_net(int, manifold::uarch::NetworkPacket* pkt)
 {
     int port = pkt->dst_port;
 
-    if(port == LLP_cache::LLP_ID) {
+    if(port == manifold::uarch::LLP_ID) {
 	if(pkt->type == CREDIT_MSG_TYPE)
 	    stats_num_llp_incoming_credits++;
 	else
@@ -84,7 +84,7 @@ void MuxDemux :: handle_net(int, manifold::uarch::NetworkPacket* pkt)
 
 	m_llp->handle_peer_and_manager_request(0, pkt);
     }
-    else if(port == LLP_cache::LLS_ID) {
+    else if(port == manifold::uarch::LLS_ID) {
 	if(pkt->type == CREDIT_MSG_TYPE)
 	    stats_num_lls_incoming_credits++;
 	else

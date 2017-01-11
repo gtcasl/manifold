@@ -22,7 +22,7 @@ void Iris_builder :: read_network_topology(libconfig::Config& config)
     try {
 	const char* topo1 = config.lookup("network.topology");
 	m_net_topo = topo1;
-	if(m_net_topo != "RING" && m_net_topo != "TORUS") {
+	if(m_net_topo != "RING" && m_net_topo != "TORUS" && m_net_topo != "TORUS6P") { 
 	    cerr << "Unknown network topology: " << m_net_topo << ". Iris only supports RING and TORUS.\n";
 	    exit(1);
 	}
@@ -52,6 +52,15 @@ void Iris_builder :: read_network_topology(libconfig::Config& config)
 	    torus_params.link_width = config.lookup("network.link_width");
 	    torus_params.ni_up_credits = config.lookup("network.ni_up_credits");
 	    torus_params.ni_upstream_buffer_size = config.lookup("network.ni_up_buffer");
+	}
+	else if(this->m_net_topo == "TORUS6P") {
+	    torus6p_params.x_dim = m_x_dimension;
+	    torus6p_params.y_dim = m_y_dimension;
+	    torus6p_params.no_vcs = config.lookup("network.num_vcs");
+	    torus6p_params.credits = config.lookup("network.credits");
+	    torus6p_params.link_width = config.lookup("network.link_width");
+	    torus6p_params.ni_up_credits = config.lookup("network.ni_up_credits");
+	    torus6p_params.ni_upstream_buffer_size = config.lookup("network.ni_up_buffer");
 	}
 	//COH_MSG_TYPE = config.lookup("network.coh_msg_type");
 	//MEM_MSG_TYPE = config.lookup("network.mem_msg_type");
@@ -95,6 +104,7 @@ void Iris_builder :: create_network(manifold::kernel::Clock& clock, int part) //
 
     m_ring = 0;
     m_torus = 0;
+    m_torus6p = 0;
 
     if(this->m_net_topo == "RING") {
 	m_ring = topoCreator<NetworkPacket>::create_ring(clock, &(this->ring_params), mapping, (SimulatedLen<NetworkPacket>*)m_simLen, (VnetAssign<NetworkPacket>*)m_vnet, this->CREDIT_MSG_TYPE, 0, 0); //network on LP 0
@@ -124,7 +134,12 @@ void Iris_builder :: create_network(manifold::kernel::Clock& clock, int part) //
 	    default:
 		assert(0);
 	}//switch
-	m_torus = topoCreator<NetworkPacket>::create_torus(clock, &(this->torus_params), mapping, (SimulatedLen<NetworkPacket>*)m_simLen, (VnetAssign<NetworkPacket>*)m_vnet, this->CREDIT_MSG_TYPE, &node_lp); //network on LP 0
+        if(this->m_net_topo == "TORUS") {
+	    m_torus = topoCreator<NetworkPacket>::create_torus(clock, &(this->torus_params), mapping, (SimulatedLen<NetworkPacket>*)m_simLen, (VnetAssign<NetworkPacket>*)m_vnet, this->CREDIT_MSG_TYPE, &node_lp); //network on LP 0
+        }
+        else if(this->m_net_topo == "TORUS6P") {
+	    m_torus6p = topoCreator<NetworkPacket>::create_torus6p(clock, &(this->torus6p_params), mapping, (SimulatedLen<NetworkPacket>*)m_simLen, (VnetAssign<NetworkPacket>*)m_vnet, this->CREDIT_MSG_TYPE, &node_lp); //network on LP 0
+        }
     }
 
 }
@@ -133,7 +148,7 @@ void Iris_builder :: create_network(manifold::kernel::Clock& clock, int part) //
 
 const std::vector<manifold::kernel::CompId_t>& Iris_builder :: get_interface_cid()
 {
-    return (m_ring != 0) ? m_ring->get_interface_id() : m_torus->get_interface_id();
+    return (m_ring != 0) ? m_ring->get_interface_id() : (m_torus != 0) ? m_torus->get_interface_id() : m_torus6p->get_interface_id();
 }
 
 
@@ -141,8 +156,8 @@ void Iris_builder :: pre_simulation()
 {
 
 #ifdef FORECAST_NULL
-    const std::vector<GenNetworkInterface<NetworkPacket>*>& nis = (m_ring != 0) ? m_ring->get_interfaces() : m_torus->get_interfaces();
-    const std::vector<SimpleRouter*>& routers = (m_ring != 0) ? m_ring->get_routers() : m_torus->get_routers();
+    const std::vector<GenNetworkInterface<NetworkPacket>*>& nis = (m_ring != 0) ? m_ring->get_interfaces() : (m_torus != 0) ? m_torus->get_interfaces() : m_torus6p->get_interfaces();
+    const std::vector<SimpleRouter*>& routers = (m_ring != 0) ? m_ring->get_routers() : (m_torus != 0) ? m_torus->get_routers() : m_torus6p->get_routers();
 
     assert(nis.size() == routers.size());
 
@@ -179,8 +194,10 @@ void Iris_builder :: print_stats(std::ostream& out)
 {
     if(m_ring)
 	m_ring->print_stats(out);
-    else
+    else if(m_torus)
 	m_torus->print_stats(out);
+    else 
+	m_torus6p->print_stats(out);
 
 }
 

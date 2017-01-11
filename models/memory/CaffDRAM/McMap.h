@@ -16,6 +16,10 @@ public:
 
     int lookup(uint64_t addr);
 
+    uint64_t get_local_addr(uint64_t);
+    uint64_t get_global_addr(uint64_t addr, uint64_t idx) { return addr; }
+    int get_page_offset_bits(void) {return 0; }
+
 #ifdef CAFFDRAM_TEST
 public:
 #else
@@ -24,6 +28,7 @@ private:
 
     std::vector<int> m_nodeIds;
     int m_mc_shift_bits;
+    int mc_selector_bits;
     uint64_t  m_mc_selector_mask;
 };
 

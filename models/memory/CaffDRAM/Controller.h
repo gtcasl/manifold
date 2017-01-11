@@ -12,6 +12,8 @@
 #include "Dsettings.h"
 #include "Dreq.h"
 
+#include "McMap.h"
+
 #include "kernel/component-decl.h"
 #include "kernel/manifold-decl.h"
 #include "uarch/networkPacket.h"
@@ -31,7 +33,9 @@ public:
 	Controller(int nid, const Dsettings&, int out_credits, bool st_resp=false);
 	~Controller();
 
-	int get_nid() { return m_nid; }
+    int get_nid() { return m_nid; }
+
+    void set_mc_map (CaffDramMcMap *m);
 
 	template<typename T>
 	void handle_request(int, uarch::NetworkPacket* pkt);
@@ -64,14 +68,15 @@ private:
 	Dsettings* dramSetting;
 	Channel** myChannel;
 
-        static int MEM_MSG_TYPE;
-        static int CREDIT_MSG_TYPE;
+    static int MEM_MSG_TYPE;
+    static int CREDIT_MSG_TYPE;
 	static bool Msg_type_set; //this is used to ensure message types are only set once
 
 	int m_downstream_credits;
 	const int m_DOWNSTREAM_FULL_CREDITS; //for debug
 	std::list<uarch::NetworkPacket*> m_completed_reqs; //this is the output buffer holding completed requests.
 
+    CaffDramMcMap *mc_map;
 
 	//for stats
 	struct Req_info {
@@ -91,7 +96,7 @@ private:
 	uint64_t stats_last_requests_count_change_tick; //when the count changed last time
 	uint64_t stats_requests_count_integration; // sigma(c * t): c: requests count; t: ticks the count lasted
 	                                           // integration/total_ticks = average requests at any moment
-        uint64_t stats_non_zero_requests_ticks; //num of ticks during which there is 1 or more request
+    uint64_t stats_non_zero_requests_ticks; //num of ticks during which there is 1 or more request
 
 	//stats
 	unsigned stats_max_output_buffer_size;
@@ -146,8 +151,10 @@ cerr << "@ " << dec << manifold::kernel::Manifold::NowTicks() << " mc [" << m_ni
 	req->set_dst(pkt->get_src());
 	req->set_dst_port(pkt->get_src_port());
 	req->set_src(m_nid);
-	req->set_src_port(0);
-	manifold::kernel::Ticks_t latency = processRequest(req->get_addr(), manifold::kernel::Manifold::NowTicks()); //????????????? using default clock here.
+    req->set_src_port(0);
+
+    assert(mc_map);
+    manifold::kernel::Ticks_t latency = processRequest(mc_map->get_local_addr(req->get_addr()), manifold::kernel::Manifold::NowTicks()); //????????????? using default clock here.
 	//The return value of processRequest() is the actual (or absolute) time of when the request
 	//is completed, but Schedule requires time relative to now. So we must pass to Schedule
 	//the return value - now.

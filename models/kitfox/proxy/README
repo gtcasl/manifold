@@ -1,0 +1,10 @@
+***** manifold::proxy *****
+
+File Tree:
+	HEADERS:
+		kitfox_proxy.h
+	SOURCES:
+		kitfox_proxy.cc
+
+Description:
+

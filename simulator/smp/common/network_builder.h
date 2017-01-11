@@ -52,6 +52,7 @@ public:
     int get_max_nodes() { return m_x_dimension * m_y_dimension; }
     int get_x_dim() { return m_x_dimension; }
     int get_y_dim() { return m_y_dimension; }
+    std::string get_topology() { return m_net_topo; } 
 
     void dep_injection(manifold::iris::SimulatedLen<manifold::uarch::NetworkPacket>* simLen,
                        manifold::iris::VnetAssign<manifold::uarch::NetworkPacket>* vnet);
@@ -69,11 +70,13 @@ private:
     int m_y_dimension;
     manifold::iris::ring_init_params ring_params;
     manifold::iris::torus_init_params torus_params;
+    manifold::iris::torus6p_init_params torus6p_params;
     //int COH_MSG_TYPE;
     //int MEM_MSG_TYPE;
     int CREDIT_MSG_TYPE;
     manifold::iris::Ring<manifold::uarch::NetworkPacket>* m_ring;
     manifold::iris::Torus<manifold::uarch::NetworkPacket>* m_torus;
+    manifold::iris::Torus6p<manifold::uarch::NetworkPacket>* m_torus6p;
     manifold::iris::SimulatedLen<manifold::uarch::NetworkPacket>* m_simLen;
     manifold::iris::VnetAssign<manifold::uarch::NetworkPacket>* m_vnet;
     bool m_default_simLen;
