@@ -38,7 +38,7 @@ before_install:
     - cd $QSIM_PREFIX
     - make release install
     - cd ..
-    - wget http://manifold.gatech.edu/wp-content/uploads/2016/10/kitfox-v1.1.tar.gz
+    - wget http://manifold.gatech.edu/wp-content/uploads/2017/01/kitfox-v1.1.tar.gz
     - tar xzvf kitfox-v1.1.tar.gz
     - cd kitfox-v1.1
     - sudo apt-get -y install flex bison
@@ -48,15 +48,17 @@ before_install:
     - cd ..
 script:
     - autoreconf -siv
-    - ./configure QSIMINC=${QSIM_PREFIX}/include KITFOXINC=${KITFOX_PREFIX}
-    - make
-    - cd ${MANIFOLD_DIR}/simulator/smp/QsimProxy
-    - make -f Makefile.kitfox
-    - cd ${MANIFOLD_DIR}
     - ./configure QSIMINC=${QSIM_PREFIX}/include --without-kitfox
     - make
     - cd ${MANIFOLD_DIR}/simulator/smp/QsimProxy
     - make -f Makefile
+    - cd ${MANIFOLD_DIR}
+    - make distclean
+    - ./configure QSIMINC=${QSIM_PREFIX}/include KITFOXINC=${KITFOX_PREFIX}
+    - make
+    - cd ${MANIFOLD_DIR}/simulator/smp/QsimProxy
+    - make clean
+    - make -f Makefile.kitfox
 after_failure:
     - cat ${MANIFOLD_DIR}/config.log
 compiler:
