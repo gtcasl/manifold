@@ -1,6 +1,5 @@
+#ifdef USE_KITFOX
 #include "kitfox_proxy.h"
-#include "kitfox.h"
-#include "uarch/kitfoxCounter.h"
 
 using namespace std;
 using namespace libKitFox;
@@ -160,3 +159,5 @@ void kitfox_proxy_t::add_kitfox_reliability_component(Comp_ID ComponentID)
     kitfox_reliability_component.push_back(ComponentID);
 }
 #endif
+
+#endif //USE_KITFOX
