@@ -1,6 +1,8 @@
 #ifndef KITFOX_PROXY_BUILDER_H
 #define KITFOX_PROXY_BUILDER_H
 
+#define USE_KITFOX 1
+
 #include "kernel/component-decl.h"
 #include "kitfox_proxy.h"
 

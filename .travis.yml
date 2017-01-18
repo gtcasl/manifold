@@ -53,9 +53,11 @@ script:
     - cd ${MANIFOLD_DIR}/simulator/smp/QsimProxy
     - make -f Makefile
     - cd ${MANIFOLD_DIR}
+    - make distclean
     - ./configure QSIMINC=${QSIM_PREFIX}/include KITFOXINC=${KITFOX_PREFIX}
     - make
     - cd ${MANIFOLD_DIR}/simulator/smp/QsimProxy
+    - make clean
     - make -f Makefile.kitfox
 after_failure:
     - cat ${MANIFOLD_DIR}/config.log

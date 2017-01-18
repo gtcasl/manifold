@@ -1,5 +1,6 @@
 #ifndef __KITFOX_PROXY_H__
 #define __KITFOX_PROXY_H__
+#ifdef USE_KITFOX
 
 #include <assert.h>
 #include <string>
@@ -534,9 +535,9 @@ void kitfox_proxy_t::handle_kitfox_proxy_response(int temp, kitfox_proxy_request
             cerr << partition + ".temperature = " << t << "Kelvin @" << Req->get_time() << endl;
         }
 
-        /*
         // Print thermal grid
-        grid_t<libKitFox::Kelvin> thermal_grid;
+#if 0
+        libKitFox::grid_t<libKitFox::Kelvin> thermal_grid;
         assert(kitfox->pull_data(package_id, Req->get_time(), m_clk->period, libKitFox::KITFOX_DATA_THERMAL_GRID, &thermal_grid) == libKitFox::KITFOX_QUEUE_ERROR_NONE);
 
         for(unsigned z = 0; z < thermal_grid.dies(); z++) {
@@ -550,7 +551,7 @@ void kitfox_proxy_t::handle_kitfox_proxy_response(int temp, kitfox_proxy_request
             printf("\n");
         }
         printf("\n");
-        */
+#endif
 
         // reset kitfox component counter
         comp_num = 0;
@@ -563,4 +564,5 @@ void kitfox_proxy_t::handle_kitfox_proxy_response(int temp, kitfox_proxy_request
 } // namespace kitfox_proxy
 } // namespace manifold
 
+#endif // USE_KITFOX
 #endif
