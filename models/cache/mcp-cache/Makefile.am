@@ -61,7 +61,7 @@ pkginclude_mcp_cache_HEADERS = \
 	lp_lls_unit.h \
 	mux_demux.h
 
-libmcp_cache_a_CPPFLAGS = -I$(KERNEL_INC)
+libmcp_cache_a_CPPFLAGS = -I$(KERNEL_INC) -I$(KITFOX_INC) --std=c++11
 
 EXTRA_DIST = doc
 

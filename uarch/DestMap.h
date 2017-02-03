@@ -43,7 +43,7 @@ public:
 
     int get_idx(int m_id)
     {
-        for (int i = 0; i < m_nodes.size(); i++) {
+        for (unsigned int i = 0; i < m_nodes.size(); i++) {
             if (m_nodes[i] == m_id)
                 return i;
         }

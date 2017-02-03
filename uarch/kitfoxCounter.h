@@ -11,7 +11,8 @@ namespace uarch {
 enum KitFoxType {
     null_type = 0,
     core_type,
-    cache_type,
+    l1cache_type,
+    l2cache_type,
     network_type,
     dram_type,
     num_types
@@ -221,7 +222,44 @@ public:
     counter_t execute, undiff;
 };
 
+class cache_counter_t
+{
+public:
+    cache_counter_t() { clear(); }
+    ~cache_counter_t() {}
 
+    void clear()
+    {
+        cache.clear();
+        missbuf.clear(); prefetch.clear();
+        linefill.clear(); writeback.clear();
+        undiff.clear();
+  }
+
+    void operator=(const cache_counter_t &c)
+    {
+        cache = c.cache;
+        missbuf = c.missbuf; prefetch = c.prefetch;
+        linefill = c.linefill; writeback = c.writeback;
+        undiff = c.undiff;
+    }
+
+    void operator*=(const libKitFox::Count &c)
+    {
+        cache = cache*c;
+        missbuf = missbuf*c; prefetch = prefetch*c;
+        linefill = linefill*c; writeback = writeback*c;
+        undiff = undiff*c;
+    }
+
+    // cache_banks
+    counter_t cache;
+    // cache queues
+    counter_t missbuf, prefetch;
+    counter_t linefill, writeback;
+    // undiff
+    counter_t undiff;
+};
 
 } // namespace uarch
 } //namespace manifold

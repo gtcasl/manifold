@@ -6,6 +6,11 @@
 #include "mcp-cache/lp_lls_unit.h"
 #include "network_builder.h"
 
+#ifdef LIBKITFOX
+#include "kitfox_builder.h"
+using namespace manifold::kitfox_proxy;
+#endif
+
 
 class SysBuilder_llp;
 
@@ -27,6 +32,10 @@ public:
     virtual void print_config(std::ostream&) {}
     virtual void print_stats(std::ostream&) = 0;
 
+#ifdef LIBKITFOX
+    virtual void connect_cache_kitfox_proxy(KitFoxBuilder* kitfox_builder) = 0;
+#endif
+
 protected:
     SysBuilder_llp* m_sysBuilder;
 };
@@ -45,6 +54,10 @@ public:
     int get_coh_type() { return m_COH_MSG_TYPE; }
     int get_mem_type() { return m_MEM_MSG_TYPE; }
     int get_credit_type() { return m_CREDIT_MSG_TYPE; }
+
+#ifdef LIBKITFOX
+    void connect_cache_kitfox_proxy(KitFoxBuilder* kitfox_builder) {}
+#endif
 
 protected:
 
@@ -79,6 +92,10 @@ public:
     void print_config(std::ostream&);
     void print_stats(std::ostream&);
 
+#ifdef LIBKITFOX
+    void connect_cache_kitfox_proxy(KitFoxBuilder* kitfox_builder);
+#endif
+
 private:
 
     std::map<int, manifold::mcp_cache_namespace::LP_LLS_unit*> m_caches;
@@ -103,6 +120,10 @@ public:
     void print_stats(std::ostream&);
 
     std::map<int,int>& get_l1_cids() { return m_l1_cids; }
+
+#ifdef LIBKITFOX
+    void connect_cache_kitfox_proxy(KitFoxBuilder* kitfox_builder);
+#endif
 
 private:
 

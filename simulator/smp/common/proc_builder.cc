@@ -515,7 +515,7 @@ void Spx_builder :: connect_proc_kitfox_proxy(KitFoxBuilder* kitfox_builder)
                             kitfox_cid, proc_cid, &kitfox_proxy_t::handle_kitfox_proxy_response<manifold::uarch::pipeline_counter_t>,
                             Clock::Master(), Clock::Master(), 1, 1);
         if (kitfox_builder->get_kitfox())
-            kitfox_builder->get_kitfox()->add_manifold_node(proc_cid);
+            kitfox_builder->get_kitfox()->add_manifold_node(proc_cid, KitFoxType::core_type);
     }
 }
 #endif
