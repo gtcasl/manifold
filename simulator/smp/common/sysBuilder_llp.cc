@@ -666,6 +666,7 @@ void SysBuilder_llp :: connect_components()
 #ifdef LIBKITFOX
     if(m_kitfox_builder){
         m_proc_builder->connect_proc_kitfox_proxy(m_kitfox_builder);
+        m_cache_builder->connect_cache_kitfox_proxy(m_kitfox_builder);
     }
 #endif
 }

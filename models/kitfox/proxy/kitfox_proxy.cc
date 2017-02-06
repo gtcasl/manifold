@@ -629,6 +629,12 @@ void kitfox_proxy_t::calculate_power(manifold::uarch::cache_counter_t c, manifol
     assert(comp_id != INVALID_COMP_ID);
     kitfox->calculate_power(comp_id, t, m_clk->period, c.cache);
 
+    // tlb
+    comp = prefix + ".tlb";
+    comp_id = kitfox->get_component_id(comp);
+    assert(comp_id != INVALID_COMP_ID);
+    kitfox->calculate_power(comp_id, t, m_clk->period, c.cache);
+
     // prefetch
     comp = prefix + ".prefetch";
     comp_id = kitfox->get_component_id(comp);

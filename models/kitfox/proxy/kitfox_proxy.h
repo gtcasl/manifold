@@ -104,22 +104,22 @@ void kitfox_proxy_t::handle_kitfox_proxy_response(int temp, kitfox_proxy_request
         assert(package_id != INVALID_COMP_ID);
         kitfox->calculate_temperature(package_id, Req->get_time(), m_clk->period);
 
-        for(unsigned int i = 0; i < manifold_node.size(); i++){
+        for(unsigned int i = 0, core_id = 0, l1_id = 0, l2_id = 0; i < manifold_node.size(); i++){
             libKitFox::Kelvin t;
             string partition;
             libKitFox::Comp_ID par_id;
 
             switch (manifold_node[i].second) {
             case manifold::uarch::KitFoxType::core_type: {
-                partition = "package.core_die.core" + std::to_string(i);
+                partition = "package.core_die.core" + std::to_string(core_id++);
                 break;
             }
             case manifold::uarch::KitFoxType::l1cache_type: {
-                partition = "package.core_die.l1cache" + std::to_string(i);
+                partition = "package.core_die.l1cache" + std::to_string(l1_id++);
                 break;
             }
             case manifold::uarch::KitFoxType::l2cache_type: {
-                partition = "package.llc_die.cache" + std::to_string(i);
+                partition = "package.llc_die.cache" + std::to_string(l2_id++);
                 break;
             }
             default:

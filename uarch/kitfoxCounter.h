@@ -231,14 +231,16 @@ public:
     void clear()
     {
         cache.clear();
+        tlb.clear();
         missbuf.clear(); prefetch.clear();
         linefill.clear(); writeback.clear();
         undiff.clear();
-  }
+    }
 
     void operator=(const cache_counter_t &c)
     {
         cache = c.cache;
+        tlb = c.tlb;
         missbuf = c.missbuf; prefetch = c.prefetch;
         linefill = c.linefill; writeback = c.writeback;
         undiff = c.undiff;
@@ -247,6 +249,7 @@ public:
     void operator*=(const libKitFox::Count &c)
     {
         cache = cache*c;
+        tlb = tlb*c;
         missbuf = missbuf*c; prefetch = prefetch*c;
         linefill = linefill*c; writeback = writeback*c;
         undiff = undiff*c;
@@ -254,6 +257,8 @@ public:
 
     // cache_banks
     counter_t cache;
+    // tlb
+    counter_t tlb;
     // cache queues
     counter_t missbuf, prefetch;
     counter_t linefill, writeback;

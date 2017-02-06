@@ -116,7 +116,15 @@ void L2_cache :: process_incoming_coh(Coh_msg* request)
 {
     DBG_L2_CACHE_TICK_ID(cout, "######  handle_incoming()_coh, srcID= " << request->src_id << " type= " << int(request->type) << " addr=(" <<hex<< request->addr <<dec<< ")" << endl);
 
-
+#ifdef LIBKITFOX
+    counter.cache.read_tag += 100;
+    counter.cache.search += 100;
+    if (request->rw == 1) { //write
+        counter.cache.write_tag += 100;
+        counter.cache.write += 100;
+    } else
+        counter.cache.read += 100;
+#endif
 
     if(request->type == Coh_msg :: COH_REQ) {
         stats_num_reqs++;
@@ -141,6 +149,15 @@ void L2_cache :: process_mem_resp (Mem_msg *request)
 {
     DBG_L2_CACHE_TICK_ID(cout,  "######## process_mem_resp(), addr= " << hex << request->addr << dec << endl);
 
+#ifdef LIBKITFOX
+    counter.cache.read_tag += 100;
+    counter.cache.search += 100;
+    if (request->op_type == OpMemSt) { //write
+        counter.cache.write_tag += 100;
+        counter.cache.write += 100;
+    } else
+        counter.cache.read += 100;
+#endif
 
     if(request->op_type == OpMemLd) {
         assert(l2_map);
@@ -225,6 +242,17 @@ void L2_cache::process_client_request (Coh_msg* request, bool first)
     {
         DBG_L2_CACHE(cout, "    L2_cache: request is miss.\n");
 
+#ifdef LIBKITFOX
+        counter.missbuf.search += 35;
+        counter.missbuf.read_tag += 35;
+        counter.missbuf.write_tag += 35;
+        counter.missbuf.write += 35;
+        counter.prefetch.search += 35;
+        counter.prefetch.read_tag += 35;
+        counter.prefetch.write_tag += 35;
+        counter.prefetch.write += 35;
+#endif
+
         //first check if request is an invalidation request; a missed invalidation request should
         //be ignored.
         if(managers[0]->is_invalidation_request(request)) {
@@ -259,6 +287,16 @@ void L2_cache::process_client_request (Coh_msg* request, bool first)
                 assert(mshr->has_match(victim->get_line_addr()) == false); //victim shouldn't have an mshr entry.
 
                 start_eviction(victim_manager, request);
+
+#ifdef LIBKITFOX
+                counter.linefill.search += 35;
+                counter.linefill.write_tag += 35;
+                counter.linefill.write += 35;
+                counter.writeback.search += 35;
+                counter.writeback.write_tag += 35;
+                counter.writeback.write += 35;
+#endif
+
             }
             else
             {

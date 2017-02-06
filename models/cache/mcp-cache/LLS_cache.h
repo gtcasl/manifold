@@ -15,7 +15,8 @@ class LLS_cache : public L2_cache {
 public:
     friend class MuxDemux;
 
-    enum {PORT_L1=0, PORT_LOCAL_L1};
+    // enum {PORT_L1=0, PORT_LOCAL_L1=2};
+    enum {PORT_LOCAL_L1=3};
 
     LLS_cache (int nid, const cache_settings&, const L2_cache_settings&);
     ~LLS_cache (void);
