@@ -85,5 +85,5 @@ if [ $? -eq "0" ]; then
   echo -e "\n${bold}Manifold built successfully!${normal}\n\n"
   echo -e "Simulation Example:"
   echo -e "cd simulator/smp/QsimProxy"
-  echo -e "smp_llp ../config/conf2x3_spx_torus_llp.cfg ../state/state.4 ../benchmark/graphbig_x86/bc.tar"
+  echo -e "./smp_llp ../config/conf2x2_spx_t6p_llp.cfg ../benchmark/graphbig_x86/bc.tar"
 fi

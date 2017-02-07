@@ -68,7 +68,7 @@ int main(int argc, char** argv)
     std::cout.rdbuf(DBG_LOG.rdbuf()); // redirect cout
 #endif
 
-    sysBuilder.build_system(args, argv[2], argv[3], N_LPs, SysBuilder_llp::PART_1);
+    sysBuilder.build_system(args, argv[2], N_LPs, SysBuilder_llp::PART_1);
 
 
     //==========================================================================

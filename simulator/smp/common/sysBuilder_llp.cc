@@ -294,7 +294,7 @@ void SysBuilder_llp :: build_system(Qsim::OSDomain* qsim_osd, vector<string>& ar
 //====================================================================
 // For QsimProxy front-end
 //====================================================================
-void SysBuilder_llp :: build_system(vector<string>& args, const char *stateFile, const char* appFile, int n_lps, int part)
+void SysBuilder_llp :: build_system(vector<string>& args, const char* appFile, int n_lps, int part)
 {
     assert(m_conf_read == true);
 
@@ -317,7 +317,7 @@ void SysBuilder_llp :: build_system(vector<string>& args, const char *stateFile,
 
     assert(m_proc_builder->get_fe_type() == ProcBuilder::INVALID_FE_TYPE);
     m_proc_builder->set_fe_type(ProcBuilder::QSIMPROXY);
-    create_qsimproxy_nodes(args,stateFile,appFile,n_lps,part);
+    create_qsimproxy_nodes(args,appFile,n_lps,part);
 
     //connect components
     connect_components();
@@ -413,10 +413,10 @@ void SysBuilder_llp :: create_qsimlib_nodes(Qsim::OSDomain* qsim_osd, vector<str
 
 //====================================================================
 //====================================================================
-void SysBuilder_llp :: create_qsimproxy_nodes(vector<string>& args, const char* stateFile, const char* appFile, int n_lps, int part)
+void SysBuilder_llp :: create_qsimproxy_nodes(vector<string>& args, const char* appFile, int n_lps, int part)
 {
     m_qsim_builder = new QsimProxyBuilder(this);
-    m_qsim_builder->read_config(m_config, stateFile, appFile);
+    m_qsim_builder->read_config(m_config, appFile);
     m_qsim_builder->create_qsim(0);
 
     switch(m_proc_builder->get_proc_type()) {

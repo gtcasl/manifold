@@ -40,7 +40,7 @@ public:
     void config_system();
     void build_system(FrontendType type, int n_lps, std::vector<std::string>& args, int part); //for QSim client and tracefile
     void build_system(Qsim::OSDomain* osd, std::vector<std::string>& args); //for QSimLib
-    void build_system(std::vector<std::string>& args, const char* stateFile, const char* appFile, int n_lps, int part); // for QSimProxy
+    void build_system(std::vector<std::string>& args, const char* appFile, int n_lps, int part); // for QSimProxy
 
     void pre_simulation();
     void print_config(std::ostream& out);
@@ -104,7 +104,7 @@ private:
 
     void create_qsimclient_nodes(int n_lps, std::vector<std::string>& argv, int part);
     void create_qsimlib_nodes(Qsim::OSDomain* qsim_osd, vector<string>& args);
-    void create_qsimproxy_nodes(vector<string>& args, const char* stateFile, const char* appFile, int n_lps, int part);
+    void create_qsimproxy_nodes(vector<string>& args, const char* appFile, int n_lps, int part);
     void create_trace_nodes(int n_lps, vector<string>& args, int part);
 
 #ifdef LIBKITFOX
