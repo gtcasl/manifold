@@ -146,6 +146,23 @@ void L1_cache :: process_processor_request (cache_req *request, bool first)
 
     DBG_L1_CACHE_TICK_ID( cout,  "###### " << " process_processor_request():  addr= " <<hex<< request->addr <<dec<< ((request->op_type==OpMemLd) ? " LD" : " ST") << "\n" );
 
+#ifdef LIBKITFOX
+    if(request->op_type==OpMemLd) {
+        counter.cache.read += 3;
+        counter.cache.search += 3;
+        counter.cache.read_tag += 3;
+    } else {
+        counter.cache.write += 3;
+        counter.cache.search += 3;
+        counter.cache.read_tag += 3;
+        counter.cache.write_tag += 3;
+    }
+    counter.tlb.search += 3;
+    counter.tlb.read += 3;
+    counter.tlb.write += 3;
+    counter.tlb.read_tag += 3;
+#endif
+
     /** This code may be modified in the future to enable parallel events while transient (read while waiting for previous read-unblock).  For the time being, just assume no parallel events for a single address */
     if (mshr->has_match(request->addr))
     {
@@ -189,6 +206,17 @@ void L1_cache :: process_processor_request (cache_req *request, bool first)
     if (!my_table->has_match (request->addr)) {
     DBG_L1_CACHE(cout, "    miss.\n");
 
+#ifdef LIBKITFOX
+    counter.missbuf.search += 3;
+    counter.missbuf.read_tag += 3;
+    counter.missbuf.write_tag += 3;
+    counter.missbuf.write += 3;
+    counter.prefetch.search += 3;
+    counter.prefetch.read_tag += 3;
+    counter.prefetch.write_tag += 3;
+    counter.prefetch.write += 3;
+#endif
+
         /** Check if an invalid block exists already or the LRU block can begin eviction. */
     hash_table_entry = my_table->reserve_block_for (request->addr);
 
@@ -200,6 +228,16 @@ void L1_cache :: process_processor_request (cache_req *request, bool first)
         DBG_L1_CACHE(cout, "  start eviction line= " <<hex<< my_table->get_replacement_entry(request->addr)->get_line_addr() <<dec<< "\n");
 
         start_eviction (mshr_entry, request);
+
+#ifdef LIBKITFOX
+        counter.linefill.search += 3;
+        counter.linefill.write_tag += 3;
+        counter.linefill.write += 3;
+        counter.writeback.search += 3;
+        counter.writeback.write_tag += 3;
+        counter.writeback.write += 3;
+#endif
+
         }
         else {
         //the client for the victim is in transient, so it must have a stalled request in the
@@ -400,6 +438,24 @@ void L1_cache :: process_peer_and_manager_request(Coh_msg* request)
             else
                 stall request
 */
+
+#ifdef LIBKITFOX
+    if(request->rw == 0) {
+        counter.cache.read += 3;
+        counter.cache.search += 3;
+        counter.cache.read_tag += 3;
+    } else {
+        counter.cache.write += 3;
+        counter.cache.search += 3;
+        counter.cache.read_tag += 3;
+        counter.cache.write_tag += 3;
+    }
+
+    counter.tlb.search += 3;
+    counter.tlb.read += 3;
+    counter.tlb.write += 3;
+    counter.tlb.read_tag += 3;
+#endif
 
     if(request->type == Coh_msg::COH_RPLY) {
         DBG_L1_CACHE(cout, "    it is a reply.\n");

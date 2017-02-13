@@ -10,6 +10,13 @@
 #include "mcp-cache/MESI_L2_cache.h"
 #include "sysBuilder_l1l2.h"
 
+#ifdef LIBKITFOX
+#include "kitfox_proxy.h"
+#include "kitfox_builder.h"
+using namespace manifold::kitfox_proxy;
+using namespace manifold::uarch;
+#endif
+
 using namespace manifold::kernel;
 using namespace manifold::uarch;
 using namespace manifold::mcp_cache_namespace;
@@ -219,8 +226,29 @@ void MCP_lp_lls_builder :: print_stats(ostream& out)
     }
 
 }
+//====================================================================
+//====================================================================
+#ifdef LIBKITFOX
+void MCP_lp_lls_builder :: connect_cache_kitfox_proxy(KitFoxBuilder* kitfox_builder)
+{
+    int kitfox_cid = kitfox_builder->get_component_id();
 
+    for(map<int, LP_LLS_unit*>::iterator it = m_caches.begin(); it != m_caches.end(); ++it) {
+    LP_LLS_unit* unit = (*it).second;
+    int l1_cid = unit->get_llp_cid();
+    int l2_cid = unit->get_lls_cid();
 
+    Manifold :: Connect (l1_cid, L1_cache::PORT_KITFOX, &L1_cache::handle_kitfox_proxy_request<kitfox_proxy_request_t<manifold::uarch::cache_counter_t>>, kitfox_cid, l1_cid, &kitfox_proxy_t::handle_kitfox_proxy_response<manifold::uarch::cache_counter_t>, Clock::Master(), Clock::Master(), 1, 1);
+
+    Manifold :: Connect (l2_cid, L2_cache::PORT_KITFOX, &L2_cache::handle_kitfox_proxy_request<kitfox_proxy_request_t<manifold::uarch::cache_counter_t>>, kitfox_cid, l2_cid, &kitfox_proxy_t::handle_kitfox_proxy_response<manifold::uarch::cache_counter_t>, Clock::Master(), Clock::Master(), 1, 1);
+
+    if (kitfox_builder->get_kitfox()) {
+        kitfox_builder->get_kitfox()->add_manifold_node(l1_cid, KitFoxType::l1cache_type);
+        kitfox_builder->get_kitfox()->add_manifold_node(l2_cid, KitFoxType::l2cache_type);
+    }
+    }
+}
+#endif
 
 #if 0
 using namespace libconfig;
@@ -421,3 +449,28 @@ void MCP_l1l2_builder :: print_stats(ostream& out)
     }
 
 }
+//====================================================================
+//====================================================================
+#ifdef LIBKITFOX
+void MCP_l1l2_builder :: connect_cache_kitfox_proxy(KitFoxBuilder* kitfox_builder)
+{
+    int kitfox_cid = kitfox_builder->get_component_id();
+
+    for(map<int, int>::iterator it = m_l1_cids.begin(); it != m_l1_cids.end(); ++it) {
+    int l1_cid = (*it).second;
+    Manifold :: Connect (l1_cid, L1_cache::PORT_KITFOX, &L1_cache::handle_kitfox_proxy_request<kitfox_proxy_request_t<manifold::uarch::cache_counter_t>>, kitfox_cid, l1_cid, &kitfox_proxy_t::handle_kitfox_proxy_response<manifold::uarch::cache_counter_t>, Clock::Master(), Clock::Master(), 1, 1);
+
+    if (kitfox_builder->get_kitfox())
+        kitfox_builder->get_kitfox()->add_manifold_node(l1_cid, KitFoxType::l1cache_type);
+    }
+
+    for(map<int, int>::iterator it = m_l2_cids.begin(); it != m_l2_cids.end(); ++it) {
+    int l2_cid = (*it).second;
+    Manifold :: Connect (l2_cid, L2_cache::PORT_KITFOX, &L2_cache::handle_kitfox_proxy_request<kitfox_proxy_request_t<manifold::uarch::cache_counter_t>>, kitfox_cid, l2_cid, &kitfox_proxy_t::handle_kitfox_proxy_response<manifold::uarch::cache_counter_t>, Clock::Master(), Clock::Master(), 1, 1);
+
+    if (kitfox_builder->get_kitfox())
+        kitfox_builder->get_kitfox()->add_manifold_node(l2_cid, KitFoxType::l2cache_type);
+    }
+
+}
+#endif

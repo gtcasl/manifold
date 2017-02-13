@@ -44,8 +44,8 @@ using namespace manifold::kernel;
 
 int main(int argc, char** argv)
 {
-    if(argc != 4) {
-        cerr << "Usage: mpirun -np <NP> " << argv[0] << " <config_file> <state_file> <benchmark_tar_file>" << endl;
+    if(argc != 3) {
+        cerr << "Usage: mpirun -np <NP> " << argv[0] << " <config_file> <benchmark_tar_file>" << endl;
 	    exit(1);
     }
 
@@ -78,7 +78,7 @@ int main(int argc, char** argv)
     std::cout.rdbuf(DBG_LOG.rdbuf()); // redirect cout
 #endif
 
-    sysBuilder.build_system(args, argv[2], argv[3], N_LPs, SysBuilder_llp::PART_1);
+    sysBuilder.build_system(args, argv[2], N_LPs, SysBuilder_llp::PART_1);
 
 
     //==========================================================================

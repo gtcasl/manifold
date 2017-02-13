@@ -15,7 +15,7 @@ class LLP_cache : public L1_cache {
 public:
     friend class MuxDemux;
 
-    enum {PORT_LOCAL_L2=2};
+    enum {PORT_LOCAL_L2=3};
 
 //    enum {LLP_ID=234, LLS_ID};
 

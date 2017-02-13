@@ -10,6 +10,10 @@
 #include "uarch/networkPacket.h"
 #include "uarch/DestMap.h"
 
+#ifdef LIBKITFOX
+#include "uarch/kitfoxCounter.h"
+#endif
+
 
 using namespace std;
 
@@ -29,7 +33,7 @@ public:
 
 class L2_cache : public manifold::kernel::Component {
 public:
-    enum {PORT_L1=0};
+    enum {PORT_L1=0, PORT_KITFOX};
 
     L2_cache (int nid, const cache_settings&, const L2_cache_settings&);
     virtual ~L2_cache (void);
@@ -59,6 +63,12 @@ public:
         MEM_MSG = mem;
         CREDIT_MSG = credit;
     }
+
+#ifdef LIBKITFOX
+    template <typename T>
+    void handle_kitfox_proxy_request(int temp, T *kitfox_proxy_request);
+#endif
+
 private:
     void process_client_request (Coh_msg* request, bool first);
     void process_client_reply (Coh_msg* reply);
@@ -152,6 +162,10 @@ protected:
     unsigned stats_mshr_empty_cycles;
     unsigned stats_read_mem;
     unsigned stats_dirty_to_mem;
+
+#ifdef LIBKITFOX
+    manifold::uarch::cache_counter_t counter;
+#endif
 };
 
 
@@ -193,6 +207,19 @@ void L2_cache :: handle_incoming (int, manifold::uarch::NetworkPacket* pkt)
 }
 
 
+#ifdef LIBKITFOX
+template <typename T>
+void L2_cache :: handle_kitfox_proxy_request(int temp, T *kitfox_proxy_request)
+{
+    assert(kitfox_proxy_request->get_type() == manifold::uarch::KitFoxType::l2cache_type);
+    assert(kitfox_proxy_request->get_id() == node_id);
+
+    kitfox_proxy_request->set_counter(counter);
+    counter.clear();
+
+    Send(PORT_KITFOX, kitfox_proxy_request);
+}
+#endif // LIBKITFOX
 
 
 

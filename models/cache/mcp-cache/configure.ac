@@ -94,6 +94,38 @@ if test "x${forecast_null}" = xyes ; then
     AC_DEFINE(FORECAST_NULL)
 fi
 
+# check kitfox integration
+AC_ARG_WITH([kitfox],
+    [AS_HELP_STRING([--without-kitfox],
+        [do not use QSim @<:@default: no@:>@])],
+    [kitfox=${enableval}], [kitfox=yes])
+
+if test "x${kitfox}" = xyes ; then
+    #check if QSim header files exist
+    # We allow user to specify the location of the header files, e.g.,
+    # configure KITFOXINC=/foo/kitfox
+    if test -z "$KITFOXINC" ; then
+	KITFOXINC='/usr/local/include'
+    fi
+
+    if test ! -e "$KITFOXINC/kitfox.h"; then
+	AC_MSG_ERROR([
+    -----------------------------------------
+    ERROR: kitfox.h not found in $KITFOXINC!
+    -----------------------------------------
+	])
+    else
+	AC_DEFINE(LIBKITFOX)
+	AC_SUBST([KITFOX_INC], [$KITFOXINC])
+    fi
+else # use_kitfox disabled
+    AC_MSG_WARN([
+    -----------------------------------------------------------------
+    LIBKITFOX disabled! Building only processor models not using KitFox.
+    -----------------------------------------------------------------])
+	AC_SUBST([KITFOX_INC], ["."])
+fi
+
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_HEADER_STDBOOL

@@ -9,13 +9,12 @@ using namespace manifold::uarch;
 using namespace manifold::qsim_proxy;
 using namespace Qsim;
 
-void QsimProxyBuilder::read_config(Config& config, const char* stateFile, const char*appFile)
+void QsimProxyBuilder::read_config(Config& config, const char*appFile)
 {
-    strcpy(state_file, stateFile);
-    strcpy(app_file, appFile);
-
     try {
         qsim_interrupt_handler_clock = config.lookup("qsim_interrupt_handler_clock");
+        const char* stateFile = config.lookup("processor.state");
+        strcpy(state_file,stateFile);
         uint64_t default_clock = config.lookup("default_clock");
         qsim_interrupt_interval = default_clock/qsim_interrupt_handler_clock;
     }
@@ -27,6 +26,8 @@ void QsimProxyBuilder::read_config(Config& config, const char* stateFile, const 
         cout << e.getPath() << " has incorrect type." << endl;
         exit(1);
     }
+
+    strcpy(app_file, appFile);
 }
 
 void QsimProxyBuilder::create_qsim(int LP)
@@ -54,13 +55,12 @@ void QsimProxyBuilder::print_stats(std::ostream& out)
 
 
 
-void QsimLibBuilder::read_config(Config& config, const char* stateFile, const char* appFile)
+void QsimLibBuilder::read_config(Config& config, const char* appFile)
 {
-    strcpy(state_file, stateFile);
-    strcpy(app_file, appFile);
-
     try {
         qsim_interrupt_handler_clock = config.lookup("qsim_interrupt_handler_clock");
+        const char* stateFile = config.lookup("processor.state");
+        strcpy(state_file,stateFile);
     }
     catch(SettingNotFoundException e) {
         cout << e.getPath() << " not set." << endl;
@@ -70,6 +70,7 @@ void QsimLibBuilder::read_config(Config& config, const char* stateFile, const ch
         cout << e.getPath() << " has incorrect type." << endl;
         exit(1);
     }
+    strcpy(app_file, appFile);
 }
 
 void QsimLibBuilder::create_qsim(int LP)
