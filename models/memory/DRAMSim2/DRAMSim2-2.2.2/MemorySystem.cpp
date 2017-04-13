@@ -174,10 +174,10 @@ bool MemorySystem::WillAcceptTransaction()
 	return memoryController->WillAcceptTransaction();
 }
 
-bool MemorySystem::addTransaction(bool isWrite, uint64_t addr)
+bool MemorySystem::addTransaction(int tag, uint64_t addr, bool isWrite) 
 {
 	TransactionType type = isWrite ? DATA_WRITE : DATA_READ;
-	Transaction *trans = new Transaction(type,addr,NULL);
+	Transaction *trans = new Transaction(type,addr,tag,NULL);
 	// push_back in memoryController will make a copy of this during
 	// addTransaction so it's kosher for the reference to be local 
 
@@ -236,7 +236,7 @@ void MemorySystem::update()
 	//PRINT("\n"); // two new lines
 }
 
-void MemorySystem::RegisterCallbacks( Callback_t* readCB, Callback_t* writeCB,
+void MemorySystem::RegisterCallbacks( ITransactionCompleteCB* readCB, ITransactionCompleteCB* writeCB,
                                       void (*reportPower)(double bgpower, double burstpower,
                                                           double refreshpower, double actprepower))
 {

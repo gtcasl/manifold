@@ -8,6 +8,12 @@
 using namespace std;
 using namespace manifold::mcp_cache_namespace;
 
+namespace manifold {
+namespace pagevault {
+int ea_get_partition_size();
+}
+}
+
 //! hash_entry: Constructor
 //!
 //! This is a single cache line
@@ -40,7 +46,7 @@ unsigned hash_entry :: get_set_idx()
 
 paddr_t hash_entry :: get_line_addr()
 {
-    return tag | (((paddr_t)(my_set->get_index())) << my_set->get_table()->get_offset_bits());
+    return my_set->get_line_addr(tag);
 }
 
 
@@ -112,6 +118,9 @@ hash_entry* hash_set::get_entry (paddr_t tag)
     return entry;
 }
 
+paddr_t hash_set::get_line_addr(paddr_t tag) {
+  return my_table->get_line_addr(tag, index);
+}
 
 //! hash_set: replace_entry
 //!
@@ -144,6 +153,42 @@ hash_entry* hash_table::get_replacement_entry (paddr_t addr)
 {
     return (get_set(addr)->set_entries.back());
 } 
+
+//! hash_set: get_replacement_entry
+hash_entry *hash_table::get_replacement_entry(paddr_t addr, const std::vector<uint64_t>& skiplist) {
+  //
+  // traverse the cache backward and return the first block 
+  // that doesn't belong to the input list
+  //
+  hash_set* set = get_set(addr);  
+  if (skiplist.empty())
+    return set->set_entries.back();
+  
+  for (auto iter = set->set_entries.rbegin(), 
+       iterE = set->set_entries.rend(); iter != iterE; ++iter) {
+    
+    hash_entry* he = *iter;        
+    bool found = false;    
+    if (!he->free) {
+      for (uint64_t pa : skiplist) {
+        int idx = get_index(pa);
+        paddr_t tag = get_tag(pa);
+        if (set->index == idx 
+         && he->tag == tag) {
+          found = true;
+          break;
+        }
+      }
+    }
+    
+    if (!found) {
+      return he;
+    }
+  }
+  
+  abort();
+  return nullptr;  
+}
 
 //! hash_set: update_lru
 //!
@@ -179,19 +224,13 @@ hash_table::hash_table (const char *nm, int sz,
     lookup_time(lookup_t),
     replacement_policy(rp)
 {
-    num_index_bits = (int) log2 (sets);
-    num_offset_bits = (int) log2 (block_size);
-
-    tag_mask = ~0x0;
-    tag_mask = tag_mask << (num_index_bits + num_offset_bits);
-
-    index_mask = ~0x0;
-    index_mask = index_mask << num_offset_bits;
-    index_mask = index_mask & ~tag_mask;
-
-    offset_mask = ~0x0;
-    offset_mask = offset_mask << num_offset_bits;
-;
+    num_index_bits = (int)log2(sets);
+    num_offset_bits = (int)log2(block_size);
+    num_index_shift = num_offset_bits;
+  
+    offset_mask = (1 << num_offset_bits) - 1;
+    index_mask = (paddr_t)((1 << num_index_bits) - 1) << num_index_shift;
+    tag_mask = ~(index_mask | offset_mask);
 
     for (int i = 0; i < this->sets; i++)
         my_sets[i] = new hash_set (this, assoc, i);
@@ -209,25 +248,20 @@ hash_table::hash_table (cache_settings my_settings) :
     replacement_policy(my_settings.replacement_policy),
     occupancy(0)
 {
-    num_index_bits = (int) log2 (sets);
-    num_offset_bits = (int) log2 (block_size);
-
-    tag_mask = ~0x0;
-    tag_mask = tag_mask << (num_index_bits + num_offset_bits);
-
-    index_mask = ~0x0;
-    index_mask = index_mask << num_offset_bits;
-    index_mask = index_mask & ~tag_mask;
-
-    offset_mask = ~0x0;
-    offset_mask = offset_mask << num_offset_bits;
+    num_index_bits = (int)log2(sets);
+    num_offset_bits = (int)log2(block_size);
+    num_index_shift = num_offset_bits;
+  
+    offset_mask = (1 << num_offset_bits) - 1;
+    index_mask = (paddr_t)((1 << num_index_bits) - 1) << num_index_shift;
+    tag_mask = ~(index_mask | offset_mask);
 
     for (int i = 0; i < this->sets; i++)
         my_sets[i] = new hash_set (this, assoc, i);
 }
 
 // hash_table: Destructor
-hash_table::~hash_table (void)
+hash_table::~hash_table ()
 {
     for (int i = 0; i < sets; i++) {
         delete my_sets[i];
@@ -257,7 +291,11 @@ paddr_t hash_table::get_tag (paddr_t addr)
 //! Mask out the index bits from the address and return the index.
 paddr_t hash_table::get_index (paddr_t addr)
 {
-    return ((addr & index_mask) >> num_offset_bits);
+    return ((addr & index_mask) >> num_index_shift);
+}
+
+paddr_t hash_table::get_line_addr(paddr_t tag, unsigned index) {
+  return tag | ((paddr_t)index << num_index_shift);
 }
 
 //! hash_table: get_line_addr
@@ -265,7 +303,7 @@ paddr_t hash_table::get_index (paddr_t addr)
 //! Mask out the offset bits from the address and return the tag plus index.
 paddr_t hash_table::get_line_addr (paddr_t addr)
 {
-    return (addr & offset_mask);
+    return (addr & ~offset_mask);
 }
 
 //! hash_table: get_set
@@ -361,4 +399,57 @@ void hash_table :: update_lru(paddr_t addr)
     hs->update_lru(entry);
 }
 
+///////////////////////////////////////////////////////////////////////////////
 
+// shash_table: Constructor
+shash_table::shash_table(const char *nm, int sz, int asoc, int blok_sz,
+                         int hit_t, int lookup_t, replacement_policy_t rp) {
+  name = nm;
+  size = sz;
+  assoc = asoc;
+  sets = ((sz) / (asoc * blok_sz));
+  block_size = blok_sz;
+  hit_time = hit_t;
+  lookup_time = lookup_t;
+  replacement_policy = rp;
+  occupancy = 0;
+  
+  num_index_bits = (int)log2(sets);  
+  num_offset_bits = (int)log2(block_size);
+  int partition_bits = (int)log2(pagevault::ea_get_partition_size());  
+  
+  num_index_shift = num_offset_bits + partition_bits;
+  
+  offset_mask = (1 << num_offset_bits) - 1;
+  index_mask = (paddr_t)((1 << num_index_bits) - 1) << num_index_shift;
+  tag_mask = ~(index_mask | offset_mask);
+
+  for (int i = 0; i < this->sets; ++i)
+    my_sets[i] = new hash_set(this, assoc, i);
+}
+
+// shash_table: Constructor
+shash_table::shash_table(cache_settings my_settings) {
+  name = my_settings.name;
+  size = my_settings.size;
+  assoc = my_settings.assoc;
+  sets = ((my_settings.size) / (my_settings.assoc * my_settings.block_size));
+  block_size = my_settings.block_size;
+  hit_time = my_settings.hit_time;
+  lookup_time = my_settings.lookup_time;
+  replacement_policy = (my_settings.replacement_policy);
+  occupancy = 0;
+
+  num_index_bits = (int)log2(sets);  
+  num_offset_bits = (int)log2(block_size);
+  int partition_bits = (int)log2(pagevault::ea_get_partition_size());  
+  
+  num_index_shift = num_offset_bits + partition_bits;
+  
+  offset_mask = (1 << num_offset_bits) - 1;
+  index_mask = (paddr_t)((1 << num_index_bits) - 1) << num_index_shift;
+  tag_mask = ~(index_mask | offset_mask);
+
+  for (int i = 0; i < this->sets; ++i)
+    my_sets[i] = new hash_set(this, assoc, i);
+}

@@ -3,18 +3,17 @@
 
 #include <map>
 #include <libconfig.h++>
+#include "PageVault/controller.h"
 #include "CaffDRAM/Controller.h"
 #include "DRAMSim2/dram_sim.h"
 #include "uarch/DestMap.h"
-
-
 
 class SysBuilder_llp;
 class NetworkBuilder;
 
 class MemControllerBuilder {
 public:
-    enum {CAFFDRAM, DRAMSIM}; //mc types
+    enum {CAFFDRAM, DRAMSIM, PAGEVAULT}; //mc types
 
     MemControllerBuilder(SysBuilder_llp* b) : m_sysBuilder(b) {}
 
@@ -92,9 +91,22 @@ private:
     unsigned m_MEM_SIZE; //mem size;
 };
 
+// builder for PageVault
+class PageVault_builder : public MemControllerBuilder {
+public:
+  PageVault_builder(SysBuilder_llp *b) : MemControllerBuilder(b) {}
+  ~PageVault_builder() {}
 
+  int get_type() { return PAGEVAULT; }
 
+  void read_config(libconfig::Config &);
+  void create_mcs(std::map<int, int> &id_lp);
+  void connect_mc_network(NetworkBuilder *);
+  void set_mc_map_obj(manifold::uarch::DestMap *mc_map);
 
+  void print_config(std::ostream &);
+  void print_stats(std::ostream &);
+};
 
 
 #endif // #ifndef NETWORK_BUILDER_H

@@ -9,6 +9,9 @@ enum {LLP_ID=234, LLS_ID, MEM_ID};
 class NetworkPacket {
 public:
     static const int MAX_SIZE = 256;
+    
+    NetworkPacket(int type = 0) : type(type) {} 
+    ~NetworkPacket() {}
 
     int get_type() { return type; }
     void set_type(int t) { type = t; }

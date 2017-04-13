@@ -38,6 +38,7 @@
 #include "MemoryController.h"
 #include "MemorySystem.h"
 #include "AddressMapping.h"
+#include <assert.h>
 
 #define SEQUENTIAL(rank,bank) (rank*NUM_BANKS)+bank
 
@@ -127,7 +128,7 @@ void MemoryController::receiveFromBus(BusPacket *bpacket)
 	}
 
 	//add to return read data queue
-	returnTransaction.push_back(new Transaction(RETURN_DATA, bpacket->physicalAddress, bpacket->data));
+	returnTransaction.push_back(new Transaction(RETURN_DATA, bpacket->physicalAddress, -1, bpacket->data));
 	totalReadsPerBank[SEQUENTIAL(bpacket->rank,bpacket->bank)]++;
 
 	// this delete statement saves a mindboggling amount of memory
@@ -139,7 +140,7 @@ void MemoryController::returnReadData(const Transaction *trans)
 {
 	if (parentMemorySystem->ReturnReadData!=NULL)
 	{
-		(*parentMemorySystem->ReturnReadData)(parentMemorySystem->systemID, trans->address, currentClockCycle);
+		(*parentMemorySystem->ReturnReadData)(parentMemorySystem->systemID, trans->tag, currentClockCycle);
 	}
 }
 
@@ -211,7 +212,20 @@ void MemoryController::update()
 			//inform upper levels that a write is done
 			if (parentMemorySystem->WriteDataDone!=NULL)
 			{
-				(*parentMemorySystem->WriteDataDone)(parentMemorySystem->systemID,outgoingDataPacket->physicalAddress, currentClockCycle);
+        size_t i = 0;
+        for (; i < pendingWriteTransactions.size(); i++) {
+          if (pendingWriteTransactions[i]->address == outgoingDataPacket->physicalAddress) {  
+            break;
+          }
+        }
+        assert(i != pendingWriteTransactions.size());
+        
+        (*parentMemorySystem->WriteDataDone)(              
+          parentMemorySystem->systemID, pendingWriteTransactions[i]->tag,
+          currentClockCycle);
+        
+        delete pendingWriteTransactions[i];
+        pendingWriteTransactions.erase(pendingWriteTransactions.begin() + i);
 			}
 
 			(*ranks)[outgoingDataPacket->rank]->receiveFromBus(outgoingDataPacket);
@@ -553,8 +567,7 @@ void MemoryController::update()
 			}
 			else
 			{
-				// just delete the transaction now that it's a buspacket
-				delete transaction; 
+				pendingWriteTransactions.push_back(transaction);
 			}
 			/* only allow one transaction to be scheduled per cycle -- this should
 			 * be a reasonable assumption considering how much logic would be

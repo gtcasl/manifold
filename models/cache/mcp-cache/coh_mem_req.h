@@ -20,9 +20,14 @@ struct Mem_msg {
     int src_port;
     int dst_id;
     int dst_port;
+    uint32_t onchip_mask; // onchip partition mask
+    
     uint64_t get_addr() { return addr; }
-    bool is_read() { return op_type == OpMemLd; }
+    mem_optype_t get_type() const { return op_type; }
+    bool is_read() const { return op_type == OpMemLd || op_type == OpPrefetch; }
     int get_src() { return src_id; }
+    void set_addr(uint64_t a) { addr = a; }
+    void set_type(mem_optype_t t) { op_type = t; }
     void set_src(int s) { src_id = s; }
     void set_src_port(int s) { src_port = s; }
     void set_dst(int d) { dst_id = d; }
@@ -35,16 +40,49 @@ struct Mem_msg {
 //! directory-based coherence protocol message
 struct Coh_msg {
     enum {COH_REQ, COH_RPLY};
-
+    int id;
     char type;
     paddr_t addr;
     int forward_id; //directory may ask client to forward
-    int msg; //msg type
+    MESI_messages_t msg; //msg type
     int rw; // 0 for read; 1 for write
     int src_id;
     int src_port;
     int dst_id;
     int dst_port;
+    uint32_t onchip_mask;
+      
+    Coh_msg() {
+      static int s_ids = 0;
+      id = ++s_ids;
+    }
+    
+    Coh_msg(const Coh_msg& rhs) 
+      : type(rhs.type)
+      , addr(rhs.addr)
+      , forward_id(rhs.forward_id)
+      , msg(rhs.msg)
+      , rw(rhs.rw)
+      , src_id(rhs.src_id)
+      , src_port(rhs.src_port)
+      , dst_id(rhs.dst_id)
+      , dst_port(rhs.dst_port)
+      , onchip_mask(rhs.onchip_mask)
+    {}
+    
+    Coh_msg& operator=(const Coh_msg& rhs) {
+      type = rhs.type;
+      addr = rhs.addr;
+      forward_id = rhs.forward_id;
+      msg = rhs.msg;
+      rw = rhs.rw;
+      src_id = rhs.src_id;
+      src_port = rhs.src_port;
+      dst_id = rhs.dst_id;
+      dst_port = rhs.dst_port;
+      onchip_mask = rhs.onchip_mask;
+      return *this;
+    }
 };
 
 

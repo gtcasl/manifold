@@ -88,6 +88,7 @@ private:
 	vector<unsigned> writeDataCountdown;
 	vector<Transaction *> returnTransaction;
 	vector<Transaction *> pendingReadTransactions;
+  vector<Transaction *> pendingWriteTransactions;
 	map<unsigned,unsigned> latencies; // latencyValue -> latencyCount
 	vector<bool> powerDown;
 

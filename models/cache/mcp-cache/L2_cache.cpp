@@ -8,8 +8,21 @@ using namespace manifold::kernel;
 
 
 namespace manifold {
+
+namespace pagevault {
+
+int ea_get_partition_size();
+void ea_get_partition_list(std::vector<uint64_t> &out, uint64_t addr);
+}
+
 namespace mcp_cache_namespace {
 
+static std::map<int, mcp_cache_namespace::L2_cache *> g_l2_caches;
+
+uint64_t l2_get_page_onchip_mask(uint64_t addr, int nodeid) {
+  mcp_cache_namespace::L2_cache *cache = g_l2_caches.at(nodeid);
+  return cache->get_page_onchip_mask(addr);
+}
 
 int L2_cache :: COH_MSG = -1;
 int L2_cache :: MEM_MSG = -1;;
@@ -21,6 +34,8 @@ L2_cache :: L2_cache (int nid, const cache_settings& parameters, const L2_cache_
     assert(COH_MSG != -1 && MEM_MSG != -1 && CREDIT_MSG != -1);
 
     node_id = nid;
+    g_l2_caches[nid] = this;
+    
     this->mc_map = NULL;
     this->l2_map = NULL;
     this->m_downstream_credits = settings.downstream_credits;
@@ -30,7 +45,11 @@ L2_cache :: L2_cache (int nid, const cache_settings& parameters, const L2_cache_
     //TODO: reimplement with hierarchies
     //stalled_peer_req_buffer.clear();
 
-    this->my_table = new hash_table (parameters);
+    m_PMT_Enabled = (1 != pagevault::ea_get_partition_size());
+    if (m_PMT_Enabled)
+      this->my_table = new shash_table(parameters);
+    else
+      this->my_table = new hash_table (parameters);
 
     //mshr is created as a fully associated hash table.
     cache_settings mshr_settings = parameters;
@@ -46,7 +65,9 @@ L2_cache :: L2_cache (int nid, const cache_settings& parameters, const L2_cache_
     //stats
     stats_num_reqs = 0;
     stats_miss = 0;
-    stats_MSHR_STALLs = 0;
+    stats_PREV_PART_STALLs = 0;
+    stats_MSHR_PEND_STALLs = 0;
+    stats_MSHR_FULL_STALLs = 0;
     stats_PREV_PEND_STALLs = 0;
     stats_LRU_BUSY_STALLs = 0;
     stats_TRANS_STALLs = 0;
@@ -57,6 +78,7 @@ L2_cache :: L2_cache (int nid, const cache_settings& parameters, const L2_cache_
     stats_mshr_empty_cycles = 0;
     stats_read_mem = 0;
     stats_dirty_to_mem = 0;
+    stats_clean_to_mem = 0;
 }
 
 
@@ -100,7 +122,7 @@ cout << "\n######## L2_cache node= " << node_id << " @ " << manifold::kernel::Ma
     if(stalled_client_req_buffer.size() > stats_stall_buffer_max_size)
         stats_stall_buffer_max_size = stalled_client_req_buffer.size();
 
-        process_client_request(request, true);
+        process_client_request(request, false);
     }
     else {
         assert(request->type == Coh_mem_req :: COH_RPLY);
@@ -114,7 +136,10 @@ cout << "\n######## L2_cache node= " << node_id << " @ " << manifold::kernel::Ma
 //====================================================================
 void L2_cache :: process_incoming_coh(Coh_msg* request)
 {
-    DBG_L2_CACHE_TICK_ID(cout, "######  handle_incoming()_coh, srcID= " << request->src_id << " type= " << int(request->type) << " addr=(" <<hex<< request->addr <<dec<< ")" << endl);
+  DBG_L2_CACHE_TICK_ID(cout, "######  handle_incoming()_coh, srcID= "
+                                   << request->src_id
+                                   << " type= " << int(request->type) << " addr=("
+                                   << hex << request->addr << dec << ")" << endl);
 
 #ifdef LIBKITFOX
     counter.cache.read_tag += 100;
@@ -132,7 +157,7 @@ void L2_cache :: process_incoming_coh(Coh_msg* request)
     if(stalled_client_req_buffer.size() > stats_stall_buffer_max_size)
         stats_stall_buffer_max_size = stalled_client_req_buffer.size();
 
-        process_client_request(request, true);
+        process_client_request(request, false);
     }
     else {
         assert(request->type == Coh_msg :: COH_RPLY);
@@ -159,9 +184,10 @@ void L2_cache :: process_mem_resp (Mem_msg *request)
         counter.cache.read += 100;
 #endif
 
-    if(request->op_type == OpMemLd) {
+    if(request->op_type == OpMemLd 
+    || request->op_type == OpPrefetch) {
         assert(l2_map);
-        DBG_L2_CACHE_ID(cout, "addr= " << hex << request->addr << ", laddr= "  << l2_map->get_local_addr(request->addr) << ", gaddr= " << l2_map->get_global_addr(l2_map->get_local_addr(request->addr), node_id) << dec << endl);
+        // DBG_L2_CACHE_ID(cout, "addr= " << hex << request->addr << ", laddr= "  << l2_map->get_local_addr(request->addr) << ", gaddr= " << l2_map->get_global_addr(l2_map->get_local_addr(request->addr), node_id) << dec << endl);
         // assert(l2_map->get_global_addr(l2_map->get_local_addr(request->addr), node_id) == request->addr);
 
         if (l2_map->get_page_offset_bits() > my_table->get_offset_bits())
@@ -185,17 +211,37 @@ void L2_cache :: process_mem_resp (Mem_msg *request)
     delete request;
 }
 
+uint64_t L2_cache::get_page_onchip_mask(uint64_t addr) {
+  int LOG2_BLOCK_SIZE = 6;      // 64 bytes per block
+  int LOG2_BLOCKS_PER_PAGE = 6; // 64 blocks per page
+  int BLOCKS_PER_PAGE = (1 << LOG2_BLOCKS_PER_PAGE);
+
+  uint64_t block_addr = addr >> LOG2_BLOCK_SIZE;
+  uint64_t page_addr = block_addr >> LOG2_BLOCKS_PER_PAGE;
+  uint64_t onchip_mask = 0;
+
+  for (uint32_t i = 0; i < BLOCKS_PER_PAGE; ++i) {
+    uint32_t _addr = ((page_addr << LOG2_BLOCKS_PER_PAGE) + i)
+                     << LOG2_BLOCK_SIZE;
+    if (my_table->has_match(_addr))
+      onchip_mask |= (1 << i);
+  }
+
+  return onchip_mask;
+}
 
 //====================================================================
 //====================================================================
-void L2_cache::process_client_request (Coh_msg* request, bool first)
+void L2_cache::process_client_request (Coh_msg* request, bool wakeup)
 {
-    DBG_L2_CACHE_ID(cout, "process_client_request(), addr= " << hex << request->addr << dec << endl);
-
+    DBG_L2_CACHE_ID(cout, "process_client_request("
+                          << toString(request->msg) << "), reqid= " 
+                          << request->id << ", addr= " << hex << request->addr << dec << endl);
+    
 
     /** This code may be modified in the future to enable parallel events while transient (read while waiting for previous read-unblock).  For the time being, just assume no parallel events for a single address */
-    assert(l2_map);
-    DBG_L2_CACHE_ID(cout, "addr= " << hex << request->addr << ", laddr= " << l2_map->get_local_addr(request->addr) << ", gaddr= " << l2_map->get_global_addr(l2_map->get_local_addr(request->addr), node_id) << dec << endl);
+    //assert(l2_map);
+    //DBG_L2_CACHE_ID(cout, "addr= " << hex << request->addr << ", laddr= " << l2_map->get_local_addr(request->addr) << ", gaddr= " << l2_map->get_global_addr(l2_map->get_local_addr(request->addr), node_id) << dec << endl);
     // assert(l2_map->get_global_addr(l2_map->get_local_addr(request->addr), node_id) == request->addr);
     if (l2_map->get_page_offset_bits() > my_table->get_offset_bits())
         request->addr = l2_map->get_local_addr(request->addr);
@@ -203,7 +249,7 @@ void L2_cache::process_client_request (Coh_msg* request, bool first)
     if (mshr->has_match(request->addr)) {
         DBG_L2_CACHE_ID(cout, "    PREV_PEND_STALL, addr= " << hex << request->addr << dec << endl);
 
-        assert(first);
+        assert(!wakeup);
         stall (request, C_PREV_PEND_STALL);
         stats_PREV_PEND_STALLs++;
         return;
@@ -211,10 +257,10 @@ void L2_cache::process_client_request (Coh_msg* request, bool first)
 
 
     // IMPORTANT: it's important to also check the stall buffer for requests for the same line.
-    if(first) {
-        if(stall_buffer_has_match(request->addr)) {
-            stall (request, C_PREV_PEND_STALL);
-            stats_PREV_PEND_STALLs++;
+    if(!wakeup) {
+        if(stall_buffer_has_match(request->addr, false)) {
+            stall (request, C_MSHR_PEND_STALL);
+            stats_MSHR_PEND_STALLs++;
             return;
         }
     }
@@ -228,9 +274,9 @@ void L2_cache::process_client_request (Coh_msg* request, bool first)
     {
         DBG_L2_CACHE_ID(cout, "  MSHR_STALL, addr= " << hex << request->addr << dec << endl);
 
-        assert(first);
-        stall (request, C_MSHR_STALL);
-        stats_MSHR_STALLs++;
+        assert(!wakeup);
+        stall (request, C_MSHR_FULL_STALL);
+        stats_MSHR_FULL_STALLs++;
         return;
     }
 
@@ -240,7 +286,7 @@ void L2_cache::process_client_request (Coh_msg* request, bool first)
     /** Miss logic. */
     if (!my_table->has_match(request->addr))
     {
-        DBG_L2_CACHE(cout, "    L2_cache: request is miss.\n");
+        DBG_L2_CACHE(cout, "    L2_cache: request is a miss.\n");
 
 #ifdef LIBKITFOX
         counter.missbuf.search += 35;
@@ -256,63 +302,100 @@ void L2_cache::process_client_request (Coh_msg* request, bool first)
         //first check if request is an invalidation request; a missed invalidation request should
         //be ignored.
         if(managers[0]->is_invalidation_request(request)) {
-            DBG_L2_CACHE(cout, "    L2_cache: a missed invalidation request; ignore it.\n");
+            DBG_L2_CACHE(cout,
+                             "    L2_cache: ignoring missed invalidation request; reqid= " 
+                             << request->id << ", addr= " << hex
+                             << request->addr << dec << endl);
 
             mshr_entry->invalidate();
             delete request;
+            wakeup_stalled_requests();
             return;
         }
-
-
-        /** Check if an invalid block exists already or the LRU block can begin eviction. */
-        hash_table_entry = my_table->reserve_block_for (request->addr);
-
-        if (hash_table_entry != 0)
-        {
-            mshr_map[mshr_entry->get_idx()] = hash_table_entry;
-            L2_algorithm(mshr_entry, request);
-        }
-        else { //no hash entry available, eviction required.
-            hash_entry* victim = my_table->get_replacement_entry(request->addr);
-            ManagerInterface* victim_manager = managers[victim->get_idx()];
-
-
-            if (victim_manager->req_pending() == false && mcp_stalled_req[victim_manager->getManagerID()] == 0)
-            {
-                //The 2nd part of the if statement is necessary because a manager could be in I state and waiting for
-                //data from memory.
-
-                DBG_L2_CACHE(cout, "    L2_cache start replacement, victim line addr= " <<hex<< victim->get_line_addr() <<dec<< "\n");
-
-                assert(mshr->has_match(victim->get_line_addr()) == false); //victim shouldn't have an mshr entry.
-
-                start_eviction(victim_manager, request);
-
+        
+        std::vector<uint64_t> plist;  
+       if (m_PMT_Enabled)    
+         pagevault::ea_get_partition_list(plist, request->addr);
+       
+       // reserve storage for the new block
+       hash_entry *victim = nullptr;
+       ManagerInterface *victim_manager = nullptr;
+       hash_entry *table_entry = my_table->reserve_block_for(request->addr);
+       if (nullptr == table_entry) {
+         // no hash entry available, eviction required.
+         victim = my_table->get_replacement_entry(request->addr, plist);
+         victim_manager = managers[victim->get_idx()];
+         if (victim_manager->req_pending()
+          || nullptr != mcp_stalled_req[victim_manager->getManagerID()]) {
+           // the client for the victim is in transient, so it must have a stalled request;
+           // we cannot overwrite with this to-be-stalled request.
+           // The easiest solution is for the request to give up the MSHR,
+           // and wait for wakeup when the victim's request is finished and it
+           // releases its mshr.
+           DBG_L2_CACHE(cout, "    LRU BUSY_STALL waiting for "
+                                  << hex << victim->get_line_addr() << dec
+                                  << " eviction to complete" << endl);
+           // assert(first);
+           mshr_entry->invalidate();
+           stall(request, C_LRU_BUSY_STALL);
+           stats_LRU_BUSY_STALLs++;
+           return;
+         }
+       }
+       
+       // clear onchip mask
+       request->onchip_mask = 0;
+       
+       if (m_PMT_Enabled 
+       && request->msg != GET_PREFETCH) {
+         //
+         // ccompute partition onchip mask
+         // send prefetch requests for other partition blocks that are off-chip      
+         //                 
+         for (int i = 0, n = plist.size(); i < n; ++i) {
+           paddr_t addr = plist[i];
+           if (addr != request->addr) {
+             if (mshr->has_match(addr) 
+              || stall_buffer_has_match(addr, true)
+              || my_table->has_match(addr)) {          
+               // update onchip mask
+               request->onchip_mask |= (1 << i);
+             } else {
+               // submit prefech request
+               Coh_msg *const preq = new Coh_msg();
+               *preq = *request;
+               preq->addr = addr;
+               preq->msg = GET_PREFETCH;
+               DBG_L2_CACHE(cout, "    L2_cache: submitting prefetch request, reqid= " 
+                                      << preq->id << ", addr= " << hex << preq->addr << dec << endl);
+               this->schedule_request(preq, true);         
+             }
+           }
+         }
+       }   
+       if (table_entry) {
+         mshr_map[mshr_entry->get_idx()] = table_entry;
+         L2_algorithm(mshr_entry, request);
+       } else {
+         // a manager could be in I state and waiting for data from memory.
+         DBG_L2_CACHE(cout, "    L2_cache: stalling request due to eviction, reqid= " 
+                                << request->id << ", addr= " << hex << request->addr << ", victim line addr= "
+                                << victim->get_line_addr() << dec
+                                << endl);
+         // victim shouldn't have an mshr entry.
+         assert(mshr->has_match(victim->get_line_addr()) == false);
+         start_eviction(victim_manager, request);
+         
+         
 #ifdef LIBKITFOX
-                counter.linefill.search += 35;
-                counter.linefill.write_tag += 35;
-                counter.linefill.write += 35;
-                counter.writeback.search += 35;
-                counter.writeback.write_tag += 35;
-                counter.writeback.write += 35;
+            counter.linefill.search += 35;
+            counter.linefill.write_tag += 35;
+            counter.linefill.write += 35;
+            counter.writeback.search += 35;
+            counter.writeback.write_tag += 35;
+            counter.writeback.write += 35;
 #endif
-
-            }
-            else
-            {
-                //the client for the victim is in transient, so it must have a stalled request in the
-                //stall buffer; we cannot overwrite with this to-be-stalled request. The easiest solution is
-                //for the request to give up the MSHR, and wait for wakeup when the victim's request is
-                //finished and it releases its mshr.
-                DBG_L2_CACHE(cout, "    LRU BUSY_STALL waiting for " <<hex<< my_table->get_replacement_entry(request->addr)->get_line_addr() <<dec<< "\n");
-
-                assert(first);
-                mshr_entry->invalidate();
-                stall (request, C_LRU_BUSY_STALL);
-                stats_LRU_BUSY_STALLs++;
-                return;
-            }
-        }//eviction
+       }
     }
     /** Hit and Partial-hit logic (block exists, but coherence miss). */
     else
@@ -320,11 +403,10 @@ void L2_cache::process_client_request (Coh_msg* request, bool first)
         DBG_L2_CACHE(cout, "    L2_cache :: process_client_request(), request hits in hash table.\n");
 
         hash_table_entry = my_table->get_entry(request->addr);
-
+        ManagerInterface *manager = managers[hash_table_entry->get_idx()];
 
         /** entry for this address exists, now we need to consider what state it's in */
-        if(managers[hash_table_entry->get_idx()]->req_pending() == true)
-        {
+        if (manager->req_pending()) {
             //One possibility is the entry is being evicted.
 
             //Treat TRANS_STALL the same way as LRU_BUSY_STALL. That is, we free the mshr and
@@ -334,7 +416,7 @@ void L2_cache::process_client_request (Coh_msg* request, bool first)
             //The request waiting for the eviction will not be processed.
             DBG_L2_CACHE(cout, "    L2_cache: TRANS_STALL\n");
 
-            assert(first);
+            assert(!wakeup);
             mshr_entry->invalidate();
             stall (request, C_TRANS_STALL);
             stats_TRANS_STALLs++;
@@ -370,11 +452,18 @@ void L2_cache::L2_algorithm (hash_entry* mshr_entry, Coh_msg* request)
         if(my_table->get_entry(request->addr)) {
         //my_table->update_lru(request->u.coh.addr);
         }
+        DBG_L2_CACHE(cout, "    L2_cache: committed "
+                                     << toString(request->msg) << " request; reqid= " 
+                                     << request->id << ", addr= " << hex << request->addr << dec << endl);
+              
         delete request;
         update_hash_entry(mshr_map[mshr_entry->get_idx()], mshr_entry); //write hash_entry back.
         release_mshr_entry(mshr_entry);
+        wakeup_stalled_requests();
     }
     else {
+        DBG_L2_CACHE(cout, "    L2_cache: stalling request due to manager transient state; reqid= " 
+                           << request->id << ", addr= " << hex << request->addr << dec << endl);
         mcp_stalled_req[manager->getManagerID()] = request;
     }
     }
@@ -407,10 +496,13 @@ void L2_cache :: start_eviction(ManagerInterface* manager, Coh_msg* request)
 //====================================================================
 void L2_cache :: process_client_reply (Coh_msg* reply)
 {
-    DBG_L2_CACHE_ID(cout,  "process_client_reply(), addr= " << hex << reply->addr << dec << endl);
+    DBG_L2_CACHE_ID(cout, "process_client_reply(" << toString(reply->msg)
+                                                  << "), replyid= " << reply->id 
+                                                  << ", addr= " << hex
+                                                  << reply->addr << dec << endl);
 
-    assert(l2_map);
-    DBG_L2_CACHE_ID(cout, "addr= " << hex << reply->addr << ", laddr= "  << l2_map->get_local_addr(reply->addr) << ", gaddr= " << l2_map->get_global_addr(l2_map->get_local_addr(reply->addr), node_id) << dec << endl);
+    //assert(l2_map);
+    //DBG_L2_CACHE_ID(cout, "addr= " << hex << reply->addr << ", laddr= "  << l2_map->get_local_addr(reply->addr) << ", gaddr= " << l2_map->get_global_addr(l2_map->get_local_addr(reply->addr), node_id) << dec << endl);
 
     if (l2_map->get_page_offset_bits() > my_table->get_offset_bits())
         reply->addr = l2_map->get_local_addr(reply->addr);
@@ -474,6 +566,7 @@ void L2_cache :: m_notify(ManagerInterface* manager)
     //mshr_map[mshr_entry->get_idx()] = 0; //cannot do this because the mapping is still used
                            //inside release_mshr_entry().
     release_mshr_entry(mshr_entry);
+    wakeup_stalled_requests();
     }
     else {
         //do nothing since the request is already saved in mcp_stalled_req[].
@@ -489,7 +582,11 @@ void L2_cache :: m_notify(ManagerInterface* manager)
 //====================================================================
 void L2_cache :: m_evict_notify(ManagerInterface* manager)
 {
-    DBG_L2_CACHE(cout,  "    m_evict_notify\n");
+    DBG_L2_CACHE(cout,
+                 "    There is a request waiting for eviction to finish, reqid= "
+                     << req->id << " src= " << req->src_id << " msg= " << req->msg
+                     << ", addr= " << hex << req->addr << dec << "\n");
+    
 
     Coh_msg* req = mcp_stalled_req[manager->getManagerID()];
     assert(req);
@@ -508,11 +605,11 @@ void L2_cache :: m_evict_notify(ManagerInterface* manager)
 }
 
 
-
-
-
 void L2_cache::stall (Coh_msg *request, stall_type_t stall_msg)
 {
+    DBG_L2_CACHE_ID(cout, "  stalling request due to " << toString(stall_msg) << ": reqid= " 
+                    << request->id << ", addr= " << hex << request->addr << dec << endl);
+    
     //stalled_client_req_buffer.push_back (std::make_pair (request, stall_msg));
     Stall_buffer_entry e;
     e.req = request;
@@ -522,17 +619,20 @@ void L2_cache::stall (Coh_msg *request, stall_type_t stall_msg)
 }
 
 
-bool L2_cache :: stall_buffer_has_match(paddr_t addr)
+bool L2_cache :: stall_buffer_has_match(paddr_t addr, bool ignore_invalidation_requests)
 {
     paddr_t line_addr = my_table->get_line_addr(addr);
 
     for(std::list<Stall_buffer_entry>::iterator it= stalled_client_req_buffer.begin(); it != stalled_client_req_buffer.end(); ++it) {
     if( my_table->get_line_addr((*it).req->addr) == line_addr)
-        return true;
+      if (ignore_invalidation_requests) {
+        if (managers[0]->is_invalidation_request(it->req))
+          continue;
+      }  
+      return true;
     }
     return false;
 }
-
 
 
 void L2_cache::get_from_memory (Coh_msg *request)
@@ -604,7 +704,38 @@ void L2_cache::dirty_to_memory (paddr_t addr)
     stats_dirty_to_mem++;
 }
 
+void L2_cache::clean_to_memory(paddr_t addr) {
+  DBG_LLS_CACHE_ID(cout, " clean write to memory for 0x" << hex << addr << dec
+                                                         << endl);
 
+  Mem_msg req;
+  req.type = Mem_msg::MEM_REQ;
+  assert(l2_map);
+  if (l2_map->get_page_offset_bits() > my_table->get_offset_bits())
+      req.addr = l2_map->get_global_addr(addr, node_id);
+  else
+      req.addr = addr;
+  req.op_type = OpEvict;
+  req.src_id = node_id;
+  req.dst_id = mc_map->lookup(addr);
+
+  NetworkPacket *pkt = new NetworkPacket;
+  pkt->type = MEM_MSG;
+  pkt->src = node_id;
+  pkt->dst = req.dst_id;
+  *((Mem_msg *)(pkt->data)) = req;
+  pkt->data_size = sizeof(Mem_msg);
+
+  Clock *clk = m_clk;
+  if (clk == 0)
+    clk = &Clock::Master();
+
+  manifold::kernel::Manifold::ScheduleClock(
+      my_table->get_lookup_time(), *clk, &L2_cache::send_msg_after_lookup_time,
+      this, pkt);
+
+  ++stats_clean_to_mem;
+}
 
 void L2_cache :: update_hash_entry(hash_entry* e1, hash_entry* e2)
 {
@@ -638,6 +769,17 @@ void L2_cache :: send_msg_to_l1(Coh_msg* msg)
     manifold::kernel::Manifold::ScheduleClock(my_table->get_lookup_time(), *clk, &L2_cache::send_msg_after_lookup_time, this, pkt);
 }
 
+void L2_cache::post_msg(Coh_msg *msg) {
+  if (msg->type == Coh_msg::COH_REQ) {
+    manifold::kernel::Manifold::ScheduleClock(
+        my_table->get_lookup_time(), *m_clk, &L2_cache::process_client_request,
+        this, msg, false);
+  } else {
+    manifold::kernel::Manifold::ScheduleClock(
+        my_table->get_lookup_time(), *m_clk, &L2_cache::process_client_reply,
+        this, msg);
+  }
+}
 
 //! This function is scheduled by send_msg_to_l1(), get_from_memory(), and dirty_to_memory()
 //! to send the message after a delay of lookup_time
@@ -696,8 +838,13 @@ void L2_cache :: invalidate (ManagerInterface* mgr)
     DBG_L2_CACHE_ID(cout,  " invalidating " << hash_entries[mgr->getManagerID()] << " id= " << hash_entries[mgr->getManagerID()]->get_idx() << endl);
 
     hash_entry* he = hash_entries[mgr->getManagerID()];
-    if(he->is_dirty())
+    if (he->is_dirty()) {
         dirty_to_memory(he->get_line_addr());
+    } else {
+      if (m_PMT_Enabled) {
+        clean_to_memory(he->get_line_addr());
+      }
+    }
     he->invalidate();
 
 }
@@ -735,79 +882,81 @@ void L2_cache :: ignore(ManagerInterface* mgr)
     DBG_L2_CACHE_ID(cout,  " ignore a request.\n");
 }
 
-
-
-
 void L2_cache :: release_mshr_entry(hash_entry* mshr_entry)
 {
     mshr_map[mshr_entry->get_idx()] = 0;
     mshr_entry->invalidate();
-
-
-    //check the stall buffer and see if any request waiting for mshr
-    //std::list<std::pair <Coh_mem_req *, stall_type_t> >::iterator it = stalled_client_req_buffer.begin();
-    std::list<Stall_buffer_entry>::iterator it = stalled_client_req_buffer.begin();
-
-    Coh_msg* req = 0;
-    manifold::kernel::Ticks_t stall_time;
-    stall_type_t stallType; //for debug
-
-    bool found = false; //if there's a stalled request to wake up
-    while(it != stalled_client_req_buffer.end()) {
-        //Wake up a stalled request only if it will not PREV_PEND_STALL, LRU_BUSY_STALL, or TRANS_STALL.
-    //It canno MSHR_STALL because we are releasing an MSHR entry only a few lines ago.
-    if (!mshr->has_match((*it).req->addr)) { //won't PREV_PEND
-        if(!my_table->has_match ((*it).req->addr)) { //going to miss
-        ManagerInterface* victim_manager = managers[my_table->get_replacement_entry ((*it).req->addr)->get_idx()];
-        if (victim_manager->req_pending() == false && mcp_stalled_req[victim_manager->getManagerID()] == 0) {
-            found = true;
-        }
-        }
-        else { //hit
-        if (managers[my_table->get_entry((*it).req->addr)->get_idx()]->req_pending() == false) { //won't TRANS
-            found = true;
-        }
-        }
-    }
-
-    if(found) {
-        req = (*it).req;
-        stall_time = (*it).time;
-        stalled_client_req_buffer.erase(it);
-        break;
-    }
-
-    ++it;
-    }
-
-    if(req != 0) {
-        //do a sanity check
-    paddr_t line_addr = my_table->get_line_addr(req->addr);
-    for(std::list<Stall_buffer_entry>::iterator it = stalled_client_req_buffer.begin(); it != stalled_client_req_buffer.end(); ++it) {
-        if(my_table->get_line_addr((*it).req->addr) == line_addr) {
-            assert(stall_time <= (*it).time); //if a stalled request is for the same line, then it must be stalled later than the one
-                                          //being released.
-        }
-    }
-
-    DBG_L2_CACHE_ID(cout,  " wakeup req, stall type= " << stallType << " req= " << req << " msg= " << req->msg << " addr= " <<hex<< req->addr <<dec << " src= " << req->src_id << "\n");
-
-    assert(l2_map);
-    if (l2_map->get_page_offset_bits() > my_table->get_offset_bits())
-        req->addr = l2_map->get_global_addr(req->addr, node_id);
-
-    process_client_request(req, false);
-    }
 }
 
+void L2_cache::wakeup_stalled_requests() {
+  
+  auto itEnd = stalled_client_req_buffer.end();
+  auto itReq = itEnd;
+
+  for (auto it = stalled_client_req_buffer.begin(); it != itEnd; ++it) {
+    Coh_msg *req = it->req;
+    // Wake up a stalled request only if it will not PREV_PEND_STALL,
+    // LRU_BUSY_STALL, or TRANS_STALL.
+    // It cannot MSHR_STALL because we are releasing an MSHR entry.
+    if (!mshr->has_match(req->addr)) { // won't PREV_PEND
+      if (!my_table->has_match(req->addr)) { // going to miss
+        std::vector<uint64_t> plist;  
+        if (m_PMT_Enabled)    
+          pagevault::ea_get_partition_list(plist, req->addr);
+        hash_entry *victim = my_table->get_replacement_entry(req->addr, plist);
+        ManagerInterface *victim_manager = managers[victim->get_idx()];
+        if (!victim_manager->req_pending()
+         && nullptr == mcp_stalled_req[victim_manager->getManagerID()]) {
+          itReq = it;
+          break;
+        }
+      } else { // hit
+        hash_entry *table_entry = my_table->get_entry(req->addr);
+        ManagerInterface *manager = managers[table_entry->get_idx()];
+        if (!manager->req_pending()) { // won't TRANS
+          itReq = it;
+          break; 
+        }
+      }
+    }
+  }
+
+  if (itReq != itEnd) {
+    Coh_msg *ready_req = itReq->req;
+    manifold::kernel::Ticks_t stall_time = itReq->time;
+    stall_type_t stallType = itReq->type;
+    stalled_client_req_buffer.erase(itReq);
+
+    // do a sanity check to ensure ordered wake up
+    // if a stalled request is for the same line,
+    // then it must be stalled later than the one being released.
+    paddr_t line_addr = my_table->get_line_addr(ready_req->addr);
+    for (auto it = stalled_client_req_buffer.begin(); it != itEnd; ++it) {
+      if (my_table->get_line_addr((*it).req->addr) == line_addr) {
+        assert(stall_time <= (*it).time);
+      }
+    }
+    
+    DBG_L2_CACHE_ID(cout, " wakeup req, stall type= "
+                              << stallType << " reqid= " << ready_req->id
+                              << " msg= " << ready_req->msg << " addr= " << hex
+                              << ready_req->addr << dec
+                              << " src= " << ready_req->src_id << "\n");                
+    
+    // re-schedule the request for execution
+    process_client_request(ready_req, true);
+  }
+}
 
 void L2_cache :: print_stats(std::ostream& out)
 {
     out << "L2 node " << node_id << endl
         << "    Num of reqs= " << stats_num_reqs << " misses= " << stats_miss << "  miss rate= " << (double)stats_miss/stats_num_reqs << endl
         << "    Stall buffer max size= " << stats_stall_buffer_max_size << endl
-        << "    MSHR_STALL = " << stats_MSHR_STALLs << endl
-        << "    PREV_PEND_STALL = " << stats_PREV_PEND_STALLs << endl
+        << "    PREV_PART_STALL = " << stats_PREV_PART_STALLs << endl              
+        << "    MSHR_PEND_STALL = " << stats_MSHR_PEND_STALLs << endl
+        << "    MSHR_FULL_STALL = " << stats_MSHR_FULL_STALLs << endl
+        << "    PREV_PEND_STALL = " << stats_PREV_PEND_STALLs << endl        
         << "    PREV_LRU_BUSY_STALL = " << stats_LRU_BUSY_STALLs << endl
         << "    PREV_TRANS_STALL = " << stats_TRANS_STALLs << endl
     << "    mshr occupancy = " << stats_mshr_occupancy << endl
@@ -824,7 +973,8 @@ void L2_cache :: print_stats(std::ostream& out)
     }
 
     out << "    read mem= " << stats_read_mem << endl
-        << "    dirty to mem= " << stats_dirty_to_mem << endl;
+        << "    dirty to mem= " << stats_dirty_to_mem << endl
+        << "    clean to mem = " << stats_clean_to_mem << endl;
 }
 
 //####################################################################

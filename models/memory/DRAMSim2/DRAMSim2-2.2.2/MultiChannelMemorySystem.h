@@ -47,15 +47,15 @@ class MultiChannelMemorySystem : public SimulatorObject
 		virtual ~MultiChannelMemorySystem();
 			bool addTransaction(Transaction *trans);
 			bool addTransaction(const Transaction &trans);
-			bool addTransaction(bool isWrite, uint64_t addr);
+			int addTransaction(uint64_t addr, bool isWrite);
 			bool willAcceptTransaction(); 
 			bool willAcceptTransaction(uint64_t addr); 
 			void update();
 			void printStats(bool finalStats=false);
 			ostream &getLogFile();
 			void RegisterCallbacks( 
-				TransactionCompleteCB *readDone,
-				TransactionCompleteCB *writeDone,
+				ITransactionCompleteCB *readDone,
+				ITransactionCompleteCB *writeDone,
 				void (*reportPower)(double bgpower, double burstpower, double refreshpower, double actprepower));
 
 	void InitOutputFiles(string tracefilename);
@@ -79,7 +79,7 @@ class MultiChannelMemorySystem : public SimulatorObject
 		static void mkdirIfNotExist(string path);
 		static bool fileExists(string path); 
 		CSVWriter *csvOut; 
-
+    int m_tags;
 
 	};
 }

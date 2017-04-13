@@ -48,7 +48,8 @@ MultiChannelMemorySystem::MultiChannelMemorySystem(const string &deviceIniFilena
 	systemIniFilename(systemIniFilename_), traceFilename(traceFilename_),
 	pwd(pwd_), visFilename(visFilename_), 
 	clockDomainCrosser(new ClockDomain::Callback<MultiChannelMemorySystem, void>(this, &MultiChannelMemorySystem::actual_update)),
-	csvOut(new CSVWriter(visDataOut))
+	csvOut(new CSVWriter(visDataOut)),
+  m_tags(0)
 {
 	currentClockCycle=0; 
 	if (visFilename)
@@ -441,10 +442,12 @@ bool MultiChannelMemorySystem::addTransaction(Transaction *trans)
 	return channels[channelNumber]->addTransaction(trans); 
 }
 
-bool MultiChannelMemorySystem::addTransaction(bool isWrite, uint64_t addr)
+int MultiChannelMemorySystem::addTransaction(uint64_t addr, bool isWrite)
 {
 	unsigned channelNumber = findChannelNumber(addr); 
-	return channels[channelNumber]->addTransaction(isWrite, addr); 
+  int tag = m_tags++;
+	bool ret = channels[channelNumber]->addTransaction(tag, addr, isWrite); 
+  return ret ? tag : -1;
 }
 
 /*
@@ -488,8 +491,8 @@ void MultiChannelMemorySystem::printStats(bool finalStats) {
 	csvOut->finalize();
 }
 void MultiChannelMemorySystem::RegisterCallbacks( 
-		TransactionCompleteCB *readDone,
-		TransactionCompleteCB *writeDone,
+		ITransactionCompleteCB *readDone,
+		ITransactionCompleteCB *writeDone,
 		void (*reportPower)(double bgpower, double burstpower, double refreshpower, double actprepower))
 {
 	for (size_t i=0; i<NUM_CHANS; i++)

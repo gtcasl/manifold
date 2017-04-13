@@ -40,6 +40,7 @@ public:
 #endif
     friend class hash_set;
     friend class hash_table;
+    friend class shash_table;
 
     hash_set * const my_set;
     const unsigned idx; //index within the whole table.
@@ -66,6 +67,8 @@ class hash_set {
 
       hash_table* get_table() { return my_table; }
       unsigned get_index() { return index; }
+      
+      paddr_t get_line_addr(paddr_t tag);
 
       //debug
       void dbg_print(std::ostream&);
@@ -92,7 +95,7 @@ class hash_table {
                   int assoc, int block_size, int hit_time,
                   int lookup_time, replacement_policy_t rp);
       hash_table (cache_settings my_settings);
-      ~hash_table (void);
+      virtual ~hash_table ();
 
       int get_size() const { return size; }
       int get_block_size() const { return block_size; }
@@ -103,6 +106,7 @@ class hash_table {
       paddr_t get_tag_mask() const { return tag_mask; }
       paddr_t get_tag (paddr_t addr);
       paddr_t get_index (paddr_t addr);
+      paddr_t get_line_addr(paddr_t tag, unsigned index);
       paddr_t get_line_addr (paddr_t addr);
 
       bool has_match(paddr_t addr);
@@ -113,6 +117,7 @@ class hash_table {
       hash_set* get_set (paddr_t addr);
       hash_entry* get_entry (paddr_t addr);
       hash_entry* get_replacement_entry (paddr_t addr);
+      hash_entry *get_replacement_entry(paddr_t addr, const std::vector<uint64_t>& skiplist);
 
       void get_sets(std::vector<hash_set*>&);
       int get_num_entries() const { return sets * assoc; }
@@ -131,20 +136,22 @@ class hash_table {
       void dbg_print(std::ostream&);
 
 #ifndef MCP_CACHE_UTEST
-   private:
+   protected:
 #endif
+      hash_table() {}
 
       const char *name;
-      const int size;
-      const int assoc;
-      const int sets;
-      const int block_size;
-      const int hit_time;
-      const int lookup_time;
-      const replacement_policy_t replacement_policy;
+      int size;
+      int assoc;
+      int sets;
+      int block_size;
+      int hit_time;
+      int lookup_time;
+      replacement_policy_t replacement_policy;
 
       int num_index_bits;
       int num_offset_bits;
+      int num_index_shift;
       paddr_t tag_mask;
       paddr_t index_mask;
       paddr_t offset_mask;
@@ -162,7 +169,15 @@ inline void hash_entry :: invalidate ()
     my_set->get_table()->decrease_occupancy();
 }
 
+///////////////////////////////////////////////////////////////////////////////
 
+class shash_table : public hash_table {
+public:
+  shash_table(const char *name, int size, int assoc, int block_size,
+              int hit_time, int lookup_time, replacement_policy_t rp);
+  shash_table(cache_settings my_settings);
+  ~shash_table() {}
+};
 
 } //namespace mcp_cache_namespace
 } //namespace manifold

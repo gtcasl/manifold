@@ -44,42 +44,45 @@ using namespace manifold::kernel;
 
 int main(int argc, char** argv)
 {
-    if(argc != 3) {
-        cerr << "Usage: mpirun -np <NP> " << argv[0] << " <config_file> <benchmark_tar_file>" << endl;
+    if(argc < 4) {
+        cerr << "Usage: mpirun -np <NP> " << argv[0] << " <config_file> <benchmark_tar_file> <log_file>" << endl;
 	    exit(1);
+    }
+    
+    // parse command args
+    const char *config = argv[1];
+    const char *benchmark = argv[2];
+    const char *logfile = nullptr;
+    if (argc > 3) {
+      logfile = argv[3];    
     }
 
     Manifold::Init(argc, argv);
 
     vector<string> args;
 
-    SysBuilder_llp sysBuilder(argv[1]);
+    SysBuilder_llp sysBuilder(config);
 
     sysBuilder.config_system();
-
 
     int N_LPs = 1; //number of LPs
     MPI_Comm_size(MPI_COMM_WORLD, &N_LPs);
     cout << "Number of LPs = " << N_LPs << endl;
 
+    ofstream ofsout;
+    std::streambuf *old_cout_buf = nullptr;
+    if (logfile) {
+      // redirect cout to file.
+      int Mytid;
+      MPI_Comm_rank(MPI_COMM_WORLD, &Mytid);
+      if (Mytid == 0) {      
+        ofsout.open(logfile);      
+        old_cout_buf = std::cout.rdbuf(); // save original sbuf
+        std::cout.rdbuf(ofsout.rdbuf());
+      }
+    }
 
-#define REDIRECT_COUT
-
-#ifdef REDIRECT_COUT
-    // create a file into which to write debug/stats info.
-    int Mytid;
-    MPI_Comm_rank(MPI_COMM_WORLD, &Mytid);
-    char buf[10];
-    sprintf(buf, "DBG_LOG%d", Mytid);
-    ofstream DBG_LOG(buf);
-
-    //redirect cout to file.
-    std::streambuf* cout_sbuf = std::cout.rdbuf(); // save original sbuf
-    std::cout.rdbuf(DBG_LOG.rdbuf()); // redirect cout
-#endif
-
-    sysBuilder.build_system(args, argv[2], N_LPs, SysBuilder_llp::PART_1);
-
+    sysBuilder.build_system(args, benchmark, N_LPs, SysBuilder_llp::PART_1);
 
     //==========================================================================
     //start simulation
@@ -89,13 +92,11 @@ int main(int argc, char** argv)
     Manifold::StopAt(sysBuilder.get_stop_tick());
     Manifold::Run();
 
-
     sysBuilder.print_stats(cerr);
 
-
-#ifdef REDIRECT_COUT
-    std::cout.rdbuf(cout_sbuf);
-#endif
+    if (old_cout_buf) {
+      std::cout.rdbuf(old_cout_buf);
+    }
 
     Manifold::Finalize();
 }

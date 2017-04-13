@@ -25,6 +25,12 @@ LLS_cache :: ~LLS_cache (void)
 {
 }
 
+void LLS_cache::schedule_request(Coh_msg * request, bool add_to_front) {
+  if (add_to_front)
+    m_llp_incoming.push_front(request);
+  else
+    m_llp_incoming.push_back(request);
+}
 
 void LLS_cache :: handle_llp_incoming (int port, Coh_msg* request)
 {
@@ -85,6 +91,17 @@ void LLS_cache :: send_msg_to_l1(Coh_msg* msg)
     }
 }
 
+void LLS_cache::post_msg(Coh_msg *msg) {
+  if (msg->type == Coh_msg::COH_REQ) {
+    manifold::kernel::Manifold::ScheduleClock(
+        my_table->get_lookup_time(), *m_clk, &LLS_cache::process_client_request,
+        this, msg, false);
+  } else {
+    manifold::kernel::Manifold::ScheduleClock(
+        my_table->get_lookup_time(), *m_clk, &LLS_cache::process_client_reply,
+        this, msg);
+  }
+}
 
 void LLS_cache::get_from_memory (Coh_msg *request)
 {
@@ -97,10 +114,11 @@ void LLS_cache::get_from_memory (Coh_msg *request)
     else
         req.addr = request->addr;
 
-    req.op_type = OpMemLd;
+    req.op_type = (request->msg == GET_PREFETCH) ? OpPrefetch : OpMemLd;
     req.src_id = node_id;
     req.src_port = manifold::uarch::LLS_ID;
     req.dst_id = mc_map->lookup(request->addr);
+    req.onchip_mask = request->onchip_mask;
 
     DBG_LLS_CACHE_ID(cout,  " get from memory node " << req.dst_id << " for 0x" << hex << req.addr << dec << endl);
 
@@ -161,6 +179,45 @@ void LLS_cache::dirty_to_memory (paddr_t addr)
     stats_dirty_to_mem++;
 }
 
+void LLS_cache::clean_to_memory(paddr_t addr) {
+
+  DBG_LLS_CACHE_ID(cout, " clean write to memory for 0x" << hex << addr << dec << endl);
+
+  Mem_msg req;
+  req.type = Mem_msg::MEM_REQ;
+  
+  assert(l2_map);
+  if (l2_map->get_page_offset_bits() > my_table->get_offset_bits())
+      req.addr = l2_map->get_global_addr(addr, node_id);
+  else
+      req.addr = addr;
+  
+  req.addr = addr;
+  req.op_type = OpEvict;
+  req.src_id = node_id;
+  req.src_port = manifold::uarch::LLS_ID;
+  req.dst_id = mc_map->lookup(addr);
+  req.onchip_mask = 0;
+
+  NetworkPacket * const pkt = new NetworkPacket;
+  pkt->type = MEM_MSG;
+  pkt->src = node_id;
+  pkt->src_port = manifold::uarch::LLS_ID;
+  pkt->dst = req.dst_id;
+  pkt->dst_port = manifold::uarch::MEM_ID;
+
+  *((Mem_msg *)(pkt->data)) = req;
+  pkt->data_size = sizeof(Mem_msg);
+
+  manifold::kernel::Manifold::ScheduleClock(my_table->get_lookup_time(), *m_clk,
+                                            &LLS_cache::add_to_output_buffer,
+                                            this, pkt);
+#ifdef FORECAST_NULL
+  m_msg_out_ticks.push_back(m_clk->NowTicks() + my_table->get_lookup_time());
+#endif
+
+  ++stats_clean_to_mem;
+}
 
 void LLS_cache :: add_to_output_buffer(NetworkPacket* pkt)
 {
@@ -199,8 +256,9 @@ void LLS_cache :: print_stats(ostream& out)
 {
     L2_cache :: print_stats(out);
     out << "LLS_cache stats:" << endl
-	<< "    read mem= " << stats_read_mem << endl
-        << "    dirty to mem= " << stats_dirty_to_mem << endl;
+	      << "    read mem= " << stats_read_mem << endl
+        << "    dirty to mem= " << stats_dirty_to_mem << endl
+        << "    clean to mem = " << stats_clean_to_mem << endl;
 }
 
 

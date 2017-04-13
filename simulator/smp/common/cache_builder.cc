@@ -157,6 +157,7 @@ void MCP_lp_lls_builder :: connect_cache_network(NetworkBuilder* net_builder)
                     //????????????????????????? todo: use proper clock!!
                     switch(m_sysBuilder->get_mc_builder()->get_type()) {
                     case MemControllerBuilder::CAFFDRAM:
+                    case MemControllerBuilder::PAGEVAULT:
                         Manifold :: Connect(cache_cid, MuxDemux::PORT_NET, &MuxDemux::handle_net<manifold::mcp_cache_namespace::Mem_msg>,
                                             ni_cids[node_id], GenNetworkInterface<NetworkPacket>::TERMINAL_PORT,
                                             &GenNetworkInterface<NetworkPacket>::handle_new_packet_event, Clock::Master(), Clock::Master(), 1, 1);

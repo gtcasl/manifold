@@ -60,7 +60,8 @@ L1_cache::L1_cache (int nid, const cache_settings& parameters, const L1_cache_se
     stats_processor_write_requests = 0;
     stats_hits = 0;
     stats_misses = 0;
-    stats_MSHR_STALLs = 0;
+    stats_MSHR_FULL_STALLs = 0;
+    stats_MSHR_PEND_STALLs = 0;
     stats_PREV_PEND_STALLs = 0;
     stats_LRU_BUSY_STALLs = 0;
     stats_TRANS_STALLs = 0;
@@ -169,8 +170,8 @@ void L1_cache :: process_processor_request (cache_req *request, bool first)
     DBG_L1_CACHE(cout, "  There is already an MSHR for the same line. Enter PREV_PEND_STALL.\n");
 
     assert(first);
-    stall (request, C_PREV_PEND_STALL);
-        stats_PREV_PEND_STALLs++;
+    stall (request, C_MSHR_PEND_STALL);
+        stats_MSHR_PEND_STALLs++;
         return;
     }
 
@@ -192,8 +193,8 @@ void L1_cache :: process_processor_request (cache_req *request, bool first)
     DBG_L1_CACHE(cout, "  No MSHR available. Enter MSHR_STALL.\n");
 
     assert(first);
-    stall (request, C_MSHR_STALL);
-    stats_MSHR_STALLs++;
+    stall (request, C_MSHR_FULL_STALL);
+    stats_MSHR_FULL_STALLs++;
         return;
     }
 
@@ -782,7 +783,8 @@ void L1_cache :: print_stats(std::ostream& out)
         << "    Hits = " << stats_hits << endl
         << "    Hit rate = " << (double)stats_hits / (stats_processor_read_requests + stats_processor_write_requests) << endl
         << "    Stall buffer max size= " << stats_stall_buffer_max_size << endl
-        << "    MSHR_STALL = " << stats_MSHR_STALLs << endl
+        << "    MSHR_FULL_STALL = " << stats_MSHR_FULL_STALLs << endl
+        << "    MSHR_PEND_STALL = " << stats_MSHR_PEND_STALLs << endl
         << "    PREV_PEND_STALL = " << stats_PREV_PEND_STALLs << endl
         << "    PREV_LRU_BUSY_STALL = " << stats_LRU_BUSY_STALLs << endl
         << "    PREV_TRANS_STALL = " << stats_TRANS_STALLs << endl

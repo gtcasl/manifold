@@ -171,7 +171,8 @@ protected:
     unsigned stats_processor_write_requests;
     unsigned stats_hits;
     unsigned stats_misses;
-    unsigned stats_MSHR_STALLs;
+    unsigned stats_MSHR_PEND_STALLs;
+    unsigned stats_MSHR_FULL_STALLs;
     unsigned stats_PREV_PEND_STALLs;
     unsigned stats_LRU_BUSY_STALLs;
     unsigned stats_TRANS_STALLs;

@@ -8,9 +8,8 @@ using namespace libconfig;
 using namespace manifold::kernel;
 using namespace manifold::uarch;
 using namespace manifold::mcp_cache_namespace;
-using namespace manifold::caffdram;
-using namespace manifold::dramsim;
 using namespace manifold::iris;
+using namespace manifold;
 
 void MemControllerBuilder :: print_config(std::ostream& out)
 {
@@ -48,12 +47,12 @@ void CaffDRAM_builder :: read_config(Config& config)
 
 void CaffDRAM_builder :: create_mcs(map<int, int>& id_lp)
 {
-    Controller :: Set_msg_types(m_MEM_MSG_TYPE, m_CREDIT_MSG_TYPE);
+    caffdram::Controller::Set_msg_types(m_MEM_MSG_TYPE, m_CREDIT_MSG_TYPE);
 
     for(map<int,int>::iterator it = id_lp.begin(); it != id_lp.end(); ++it) {
         int node_id = (*it).first;
     int lp = (*it).second;
-    int cid = Component :: Create<Controller>(lp, node_id, m_dram_settings, m_MC_DOWNSTREAM_CREDITS);
+    int cid = Component::Create<caffdram::Controller>(lp, node_id, m_dram_settings, m_MC_DOWNSTREAM_CREDITS);
     m_mc_id_cid_map[node_id] = cid;
     }
 
@@ -80,7 +79,7 @@ void CaffDRAM_builder :: connect_mc_network(NetworkBuilder* net_builder)
                     switch(m_sysBuilder->get_cache_builder()->get_type()) {
                     case CacheBuilder::MCP_CACHE:
                     case CacheBuilder::MCP_L1L2:
-                        Manifold :: Connect(mc_cid, Controller::PORT0, &Controller::handle_request<manifold::mcp_cache_namespace::Mem_msg>,
+                        Manifold :: Connect(mc_cid, caffdram::Controller::PORT0, &caffdram::Controller::handle_request<manifold::mcp_cache_namespace::Mem_msg>,
                                             ni_cids[node_id*2+1], GenNetworkInterface<NetworkPacket>::TERMINAL_PORT,
                                             &GenNetworkInterface<NetworkPacket>::handle_new_packet_event, Clock::Master(), Clock::Master(), 1, 1);
                         break;
@@ -96,7 +95,7 @@ void CaffDRAM_builder :: connect_mc_network(NetworkBuilder* net_builder)
                     switch(m_sysBuilder->get_cache_builder()->get_type()) {
                     case CacheBuilder::MCP_CACHE:
                     case CacheBuilder::MCP_L1L2:
-                        Manifold :: Connect(mc_cid, Controller::PORT0, &Controller::handle_request<manifold::mcp_cache_namespace::Mem_msg>,
+                        Manifold :: Connect(mc_cid, caffdram::Controller::PORT0, &caffdram::Controller::handle_request<manifold::mcp_cache_namespace::Mem_msg>,
                                             ni_cids[node_id], GenNetworkInterface<NetworkPacket>::TERMINAL_PORT,
                                             &GenNetworkInterface<NetworkPacket>::handle_new_packet_event, Clock::Master(), Clock::Master(), 1, 1);
                         break;
@@ -117,11 +116,11 @@ void CaffDRAM_builder :: connect_mc_network(NetworkBuilder* net_builder)
 
 void CaffDRAM_builder :: set_mc_map_obj(manifold::uarch::DestMap *mc_map)
 {
-    manifold::caffdram::CaffDramMcMap *m = dynamic_cast<manifold::caffdram::CaffDramMcMap*>(mc_map);
+    caffdram::CaffDramMcMap *m = dynamic_cast<caffdram::CaffDramMcMap*>(mc_map);
 
     for(map<int, int>::iterator it = m_mc_id_cid_map.begin(); it != m_mc_id_cid_map.end(); ++it) {
         int node_id = (*it).first;
-        Controller* mc = manifold::kernel::Component :: GetComponent<Controller>(m_mc_id_cid_map[node_id]);
+        caffdram::Controller* mc = manifold::kernel::Component :: GetComponent<caffdram::Controller>(m_mc_id_cid_map[node_id]);
 
         if (mc)
             mc->set_mc_map(m);
@@ -140,7 +139,7 @@ void CaffDRAM_builder :: print_stats(std::ostream& out)
 {
     for(map<int, int>::iterator it = m_mc_id_cid_map.begin(); it != m_mc_id_cid_map.end(); ++it) {
         int cid = (*it).second;
-    Controller* mc = Component :: GetComponent<Controller>(cid);
+    caffdram::Controller* mc = Component :: GetComponent<caffdram::Controller>(cid);
     if(mc)
         mc->print_stats(out);
     }
@@ -211,9 +210,9 @@ void DramSim_builder :: create_mcs(map<int, int>& id_lp)
     }
     }
 
-    Dram_sim :: Set_msg_types(m_MEM_MSG_TYPE, m_CREDIT_MSG_TYPE);
+    dramsim::Dram_sim::Set_msg_types(m_MEM_MSG_TYPE, m_CREDIT_MSG_TYPE);
 
-    Dram_sim_settings settings(m_DEV_FILE.c_str(), m_SYS_FILE.c_str(), m_MEM_SIZE, false, m_MC_DOWNSTREAM_CREDITS);
+    dramsim::Dram_sim_settings settings(m_DEV_FILE.c_str(), m_SYS_FILE.c_str(), m_MEM_SIZE, false, m_MC_DOWNSTREAM_CREDITS);
 
     Clock* clock = 0;
     if(m_use_default_clock)
@@ -227,7 +226,7 @@ void DramSim_builder :: create_mcs(map<int, int>& id_lp)
     int lp = (*it).second;
     if(!m_use_default_clock && m_clocks.size() > 1)
         clock = m_clocks[i++];
-    int cid = Component :: Create<Dram_sim>(lp, node_id, settings, *clock);
+    int cid = Component :: Create<dramsim::Dram_sim>(lp, node_id, settings, *clock);
     m_mc_id_cid_map[node_id] = cid;
     }
 }
@@ -245,7 +244,7 @@ void DramSim_builder :: connect_mc_network(NetworkBuilder* net_builder)
         for(map<int, int>::iterator it = m_mc_id_cid_map.begin(); it != m_mc_id_cid_map.end(); ++it) {
             int node_id = (*it).first;
             int mc_cid = (*it).second;
-            Dram_sim* dram_sim = Component :: GetComponent<Dram_sim>(mc_cid);
+            dramsim::Dram_sim* dram_sim = Component :: GetComponent<dramsim::Dram_sim>(mc_cid);
                     if (irisBuilder->get_topology() == "TORUS6P")
                     {
               assert(node_id >= 0 && node_id < int(ni_cids.size())/2 );
@@ -254,8 +253,8 @@ void DramSim_builder :: connect_mc_network(NetworkBuilder* net_builder)
             switch(m_sysBuilder->get_cache_builder()->get_type()) {
                 case CacheBuilder::MCP_CACHE:
                 case CacheBuilder::MCP_L1L2:
-                Manifold :: Connect(mc_cid, Controller::PORT0,
-                                    &Dram_sim::handle_incoming<manifold::mcp_cache_namespace::Mem_msg>,
+                Manifold::Connect(mc_cid, dramsim::Dram_sim::PORT0,
+                                    &dramsim::Dram_sim::handle_incoming<manifold::mcp_cache_namespace::Mem_msg>,
                             ni_cids[node_id*2+1], GenNetworkInterface<NetworkPacket>::TERMINAL_PORT,
                             &GenNetworkInterface<NetworkPacket>::handle_new_packet_event,
                             *(dram_sim->get_clock()), Clock::Master(), 1, 1);
@@ -273,8 +272,8 @@ void DramSim_builder :: connect_mc_network(NetworkBuilder* net_builder)
             switch(m_sysBuilder->get_cache_builder()->get_type()) {
                 case CacheBuilder::MCP_CACHE:
                 case CacheBuilder::MCP_L1L2:
-                Manifold :: Connect(mc_cid, Controller::PORT0,
-                                    &Dram_sim::handle_incoming<manifold::mcp_cache_namespace::Mem_msg>,
+                Manifold :: Connect(mc_cid, dramsim::Dram_sim::PORT0,
+                                    &dramsim::Dram_sim::handle_incoming<manifold::mcp_cache_namespace::Mem_msg>,
                             ni_cids[node_id], GenNetworkInterface<NetworkPacket>::TERMINAL_PORT,
                             &GenNetworkInterface<NetworkPacket>::handle_new_packet_event,
                             *(dram_sim->get_clock()), Clock::Master(), 1, 1);
@@ -299,7 +298,7 @@ void DramSim_builder :: set_mc_map_obj(manifold::uarch::DestMap *mc_map)
 {
     for(map<int, int>::iterator it = m_mc_id_cid_map.begin(); it != m_mc_id_cid_map.end(); ++it) {
         int node_id = (*it).first;
-        Dram_sim* mc = manifold::kernel::Component :: GetComponent<Dram_sim>(m_mc_id_cid_map[node_id]);
+        dramsim::Dram_sim* mc = manifold::kernel::Component :: GetComponent<dramsim::Dram_sim>(m_mc_id_cid_map[node_id]);
 
         if (mc)
             mc->set_mc_map(mc_map);
@@ -328,8 +327,130 @@ void DramSim_builder :: print_stats(std::ostream& out)
 {
     for(map<int, int>::iterator it = m_mc_id_cid_map.begin(); it != m_mc_id_cid_map.end(); ++it) {
         int cid = (*it).second;
-    Dram_sim* mc = Component :: GetComponent<Dram_sim>(cid);
+    dramsim::Dram_sim* mc = Component :: GetComponent<dramsim::Dram_sim>(cid);
     if(mc)
         mc->print_stats(out);
     }
+}
+
+//####################################################################
+// PageVault
+//####################################################################
+
+void PageVault_builder::read_config(Config &config) {
+  pagevault::config_t* _config = pagevault::get_config();
+  try {    
+    // system settings
+    {
+      const Setting& mc_nodes = config.lookup("mc.node_idx");
+      m_NUM_MC = mc_nodes.getLength();
+    }
+    // network settings    
+    _config->mem_msg_type    = config.lookup("network.mem_msg_type");
+    _config->credit_msg_type = config.lookup("network.credit_msg_type");
+    _config->downstream_credits = config.lookup("mc.downstream_credits");
+    
+    // dramsim2 settings
+    {
+      const Setting& dramsim2_cfg = config.lookup("dramsim2");
+      _config->dramsim2.dev_file = (const char*)dramsim2_cfg["dev_file"];
+      _config->dramsim2.sys_file = (const char*)dramsim2_cfg["sys_file"];
+      _config->dramsim2.size     = dramsim2_cfg["size"];
+    }
+    
+    // hmcsim settings 
+    {
+      const Setting& hmc_cfg = config.lookup("hmcsim");
+      _config->hmc.vault_clock = hmc_cfg["vault_clock"];
+      _config->hmc.num_devs    = hmc_cfg["num_devs"];
+      _config->hmc.capacity    = hmc_cfg["capacity"];
+      _config->hmc.block_size  = hmc_cfg["block_size"];
+      _config->hmc.num_links   = hmc_cfg["num_links"];
+      _config->hmc.num_vaults  = hmc_cfg["num_vaults"];
+      _config->hmc.num_drams   = hmc_cfg["num_drams"];
+      _config->hmc.num_banks   = hmc_cfg["num_banks"];
+      _config->hmc.queue_depth = hmc_cfg["queue_depth"];
+      _config->hmc.xbar_depth  = hmc_cfg["xbar_depth"];
+    }    
+  } catch (SettingNotFoundException e) {
+    cout << e.getPath() << " not set." << endl;
+    exit(1);
+  } catch (SettingTypeException e) {
+    cout << e.getPath() << " has incorrect type." << endl;
+    exit(1);
+  }
+}
+
+void PageVault_builder::create_mcs(map<int, int> &id_lp) {
+  // create controller instances  
+  Clock *clock = m_sysBuilder->get_default_clock();
+  for (map<int, int>::iterator it = id_lp.begin(); it != id_lp.end(); ++it) {
+    int node_id = (*it).first;
+    int lp = (*it).second;    
+    int cid = Component::Create<pagevault::Controller>(lp, node_id, clock);
+    m_mc_id_cid_map[node_id] = cid;
+  }
+}
+
+void PageVault_builder::connect_mc_network(NetworkBuilder *net_builder) {
+  switch (net_builder->get_type()) {
+  case NetworkBuilder::IRIS: {
+    Iris_builder *irisBuilder = dynamic_cast<Iris_builder *>(net_builder);
+    assert(irisBuilder != 0);
+
+    const std::vector<CompId_t> &ni_cids = net_builder->get_interface_cid();
+    for (map<int, int>::iterator it = m_mc_id_cid_map.begin();
+         it != m_mc_id_cid_map.end(); ++it) {
+      int node_id = (*it).first;
+      assert(node_id >= 0 && node_id < int(ni_cids.size()));
+      int mc_cid = (*it).second;
+      
+      pagevault::Controller* mc =
+                Component::GetComponent<pagevault::Controller>(mc_cid);
+      assert(mc); 
+      
+      switch (m_sysBuilder->get_cache_builder()->get_type()) {
+      case CacheBuilder::MCP_CACHE:
+      case CacheBuilder::MCP_L1L2:
+        Manifold::Connect(
+            mc_cid, pagevault::Controller::PORT0,
+            &pagevault::Controller::handle_request,
+            ni_cids[node_id], GenNetworkInterface<NetworkPacket>::TERMINAL_PORT,
+            &GenNetworkInterface<NetworkPacket>::handle_new_packet_event,
+            *(mc->get_clock()), Clock::Master(), 1, 1);
+        break;
+      default:
+        assert(0);
+      }
+    } // for
+  } break;
+  default:
+    assert(0);
+    break;
+  } // switch
+}
+
+void PageVault_builder::set_mc_map_obj(manifold::uarch::DestMap *mc_map) {
+  for (auto it = m_mc_id_cid_map.begin(); it != m_mc_id_cid_map.end(); ++it) {
+    int node_id = it->first;
+    pagevault::Controller *mc = manifold::kernel::Component::GetComponent<pagevault::Controller>(m_mc_id_cid_map[node_id]);
+    if (mc)
+      mc->set_mc_map(mc_map);
+  }
+}
+
+void PageVault_builder::print_config(std::ostream &out) {
+  MemControllerBuilder::print_config(out);
+  out << "  MC type: PageVault\n";
+}
+
+void PageVault_builder::print_stats(std::ostream &out) {
+  for (map<int, int>::iterator it = m_mc_id_cid_map.begin();
+       it != m_mc_id_cid_map.end(); ++it) {
+    int cid = (*it).second;
+    pagevault::Controller *mc =
+        Component::GetComponent<pagevault::Controller>(cid);
+    if (mc)
+      mc->print_stats(out);
+  }
 }

@@ -27,6 +27,7 @@ public:
 
 protected:
     virtual void sendmsg(bool req, MESI_messages_t msg, int dest_id, int fwd_id);
+    void postmsg(bool req, MESI_messages_t msg) override;
     virtual void client_writeback();
     virtual void invalidate();
     virtual void ignore();
@@ -104,6 +105,18 @@ void MESI_LLS_cache_manager :: sendmsg(bool req, MESI_messages_t msg, int dest_i
     m_l2_cache->send_msg_to_l1(message);
 }
 
+void MESI_LLS_cache_manager::postmsg(bool req, MESI_messages_t msg) {
+  Coh_msg *message = new Coh_msg();
+  if (req)
+    message->type = Coh_msg::COH_REQ;
+  else
+    message->type = Coh_msg::COH_RPLY;
+  message->addr = m_l2_cache->get_hash_entry_by_idx(id)->get_line_addr();
+  message->msg = msg;
+  message->dst_id =  m_l2_cache->get_node_id();
+  message->forward_id = -1;
+  m_l2_cache->post_msg(message);
+}
 
 void MESI_LLS_cache_manager :: client_writeback()
 {
@@ -174,16 +187,22 @@ void MESI_LLS_cache :: print_stats(ostream& out)
 
     unsigned total_coh_msg = 0;
     unsigned total_coh_data_msg = 0;
+    
+    uint64_t total_prefetches = 0;
+    uint64_t used_prefetches = 0;
 
     for(unsigned i=0; i<managers.size(); i++) {
         MESI_LLS_cache_manager* m = dynamic_cast<MESI_LLS_cache_manager*>(managers[i]);
-	total_coh_msg += m->get_stats_coh_msg_to_network();
-	total_coh_data_msg += m->get_stats_coh_data_msg_to_network();
+      total_coh_msg += m->get_stats_coh_msg_to_network();
+      total_coh_data_msg += m->get_stats_coh_data_msg_to_network();
+  
+      total_prefetches += m->get_stats_total_prefetches();
+      used_prefetches += m->get_stats_used_prefetches();
     }
     
     out << " MESI_LLS stats:" << endl
-        << "   messages to network: " << total_coh_msg << " (coh) " 
-				     << total_coh_data_msg << " (coh+data)" << endl;
+        << "   messages to network: " << total_coh_msg << " (coh) " << total_coh_data_msg << " (coh+data)" << endl
+        << "   prefetch accuracy: " << (total_prefetches ? (used_prefetches * 1.0 / total_prefetches) : 0.0) << endl;
 
 }
 

@@ -12,6 +12,7 @@ AC_CONFIG_SUBDIRS([kernel
                    uarch
                    models/cache/mcp-cache
                    models/cache/simple-cache
+                   models/memory/PageVault
                    models/memory/CaffDRAM
                    models/memory/DRAMSim2
                    models/network/iris

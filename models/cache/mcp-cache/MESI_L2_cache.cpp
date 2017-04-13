@@ -24,6 +24,7 @@ public:
 
 protected:
     virtual void sendmsg(bool req, MESI_messages_t msg, int dest_id, int fwd_id);
+    void postmsg(bool req, MESI_messages_t msg) override;
     virtual void client_writeback();
     virtual void invalidate();
     virtual void ignore();
@@ -95,6 +96,18 @@ void MESI_L2_cache_manager :: sendmsg(bool req, MESI_messages_t msg, int dest_id
     m_l2_cache->send_msg_to_l1(message);
 }
 
+void MESI_L2_cache_manager::postmsg(bool req, MESI_messages_t msg) {
+  Coh_msg *message = new Coh_msg();
+  if (req)
+    message->type = Coh_msg::COH_REQ;
+  else
+    message->type = Coh_msg::COH_RPLY;
+  message->addr = m_l2_cache->get_hash_entry_by_idx(id)->get_line_addr();
+  message->msg = msg;
+  message->dst_id =  m_l2_cache->get_node_id();
+  message->forward_id = -1;
+  m_l2_cache->post_msg(message);
+}
 
 void MESI_L2_cache_manager :: client_writeback()
 {

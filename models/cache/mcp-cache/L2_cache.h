@@ -44,8 +44,11 @@ public:
 
     template<typename T>
     void handle_incoming (int, manifold::uarch::NetworkPacket*);
+    
+    virtual void schedule_request(Coh_msg * request, bool add_to_front) {}
 
     void send_msg_to_l1(Coh_msg* msg);
+    virtual void post_msg(Coh_msg *msg);
     void client_writeback(ManagerInterface*);
     void invalidate(ManagerInterface*);
     void ignore(ManagerInterface*);
@@ -68,9 +71,11 @@ public:
     template <typename T>
     void handle_kitfox_proxy_request(int temp, T *kitfox_proxy_request);
 #endif
-
-private:
-    void process_client_request (Coh_msg* request, bool first);
+    
+    uint64_t get_page_onchip_mask(uint64_t addr);
+    
+protected:
+    void process_client_request (Coh_msg* request, bool wakeup);
     void process_client_reply (Coh_msg* reply);
     void process_mem_resp(Mem_msg*);
 
@@ -84,11 +89,13 @@ private:
     void m_evict_notify(ManagerInterface* manager);
 
     void stall (Coh_msg *req, stall_type_t stall);
-    bool stall_buffer_has_match(paddr_t addr);
+    bool stall_buffer_has_match(paddr_t addr, bool ignore_invalidation_requests);
 
     static void update_hash_entry(hash_entry* e1, hash_entry* e2);
 
     void release_mshr_entry(hash_entry* mshr_entry);
+    
+    void wakeup_stalled_requests();
 
     //debug
     void print_mshr();
@@ -105,6 +112,8 @@ protected:
     static int COH_MSG;
     static int MEM_MSG;
     static int CREDIT_MSG;
+    
+    bool m_PMT_Enabled;
 
     int node_id;
     manifold::uarch::DestMap* mc_map;
@@ -133,6 +142,7 @@ protected:
 
     virtual void get_from_memory (Coh_msg *request);
     virtual void dirty_to_memory (paddr_t);
+    virtual void clean_to_memory(paddr_t);
 
     //flow control
     int m_downstream_credits;
@@ -151,7 +161,9 @@ protected:
     unsigned long stats_cycles;
     unsigned stats_num_reqs; //number of L1 requests
     unsigned stats_miss; //number of misses
-    unsigned stats_MSHR_STALLs;
+    unsigned stats_PREV_PART_STALLs;
+    unsigned stats_MSHR_FULL_STALLs;
+    unsigned stats_MSHR_PEND_STALLs;
     unsigned stats_PREV_PEND_STALLs;
     unsigned stats_LRU_BUSY_STALLs;
     unsigned stats_TRANS_STALLs;
@@ -162,6 +174,7 @@ protected:
     unsigned stats_mshr_empty_cycles;
     unsigned stats_read_mem;
     unsigned stats_dirty_to_mem;
+    unsigned stats_clean_to_mem;
 
 #ifdef LIBKITFOX
     manifold::uarch::cache_counter_t counter;

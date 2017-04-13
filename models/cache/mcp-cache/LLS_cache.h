@@ -26,12 +26,16 @@ public:
 	assert(m_mux == 0);
         m_mux = m;
     }
+    
+    void schedule_request(Coh_msg * request, bool add_to_front) override;
 
     void handle_llp_incoming (int, Coh_msg*);
 
     void tick();
 
     void send_msg_to_l1(Coh_msg* msg);
+    
+    void post_msg(Coh_msg *msg) override;
 
     void print_stats(std::ostream&);
 
@@ -51,6 +55,7 @@ protected:
 
     virtual void get_from_memory (Coh_msg*);
     virtual void dirty_to_memory (paddr_t);
+    void clean_to_memory(paddr_t addr) override;
 
     virtual void try_send();
     virtual void send_credit_downstream();

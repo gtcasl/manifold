@@ -24,6 +24,7 @@ typedef enum {
     MESI_MNG_I = 1,
     MESI_MNG_E,
     MESI_MNG_S,
+    MESI_MNG_P, // prefetched state
 
     MESI_MNG_IE,
     MESI_MNG_EE,        /** Exclusive state transfer. */
@@ -64,7 +65,10 @@ typedef enum {
     GET_E,
     GET_S,
     GET_EVICT,
+    GET_PREFETCH, /** block prefetching **/
 } MESI_messages_t;
+
+const char* toString(MESI_messages_t msg_type);
 
 }
 }

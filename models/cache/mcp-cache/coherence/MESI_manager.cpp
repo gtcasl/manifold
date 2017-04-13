@@ -17,6 +17,8 @@ MESI_manager::MESI_manager(int id) : ManagerInterface(id)
     owner = -1;
     unblocked_s_recv = false;
     clean_wb_recv = false;
+    m_stats_total_prefetches = 0;
+    m_stats_used_prefetches = 0;
 }
 
 /** Destructor */
@@ -111,6 +113,9 @@ void MESI_manager :: process(int msg_type, int src_id)
         case MESI_MNG_S:
             do_S(msg, src_id);
             break;
+        case MESI_MNG_P:
+            do_P(msg, src_id);
+            break;
         case MESI_MNG_IE:
             do_IE(msg, src_id);
             break;
@@ -161,12 +166,16 @@ std::cout << "Manager in state I, msg= " << msg_type << std::endl;
             break;
         case MESI_CM_E_to_I:
         case MESI_CM_M_to_I:
-	    //This happens when manager sends DEMAND_I to client, and client
-	    //before receiving it already sent E_to_I or M_to_I, which would
-	    //stall. Client in EI or MI state processes DEMAND_I and enters I.
-	    //The E_to_I or M_to_I should simply be ignored.
-	    ignore();
-	    break;
+            //This happens when manager sends DEMAND_I to client, and client
+            //before receiving it already sent E_to_I or M_to_I, which would
+            //stall. Client in EI or MI state processes DEMAND_I and enters I.
+            //The E_to_I or M_to_I should simply be ignored.
+            ignore();
+            break;
+        case GET_PREFETCH:
+          transition_to_p();
+          ++m_stats_total_prefetches;
+          break;
         default:
             invalid_msg((MESI_messages_t)msg_type);
 	    break;
@@ -329,7 +338,28 @@ std::cout << "Manager in state IE, msg= " << msg_type << std::endl;
     }
 }
 
-
+inline void MESI_manager::do_P(MESI_messages_t msg_type, int src_id) {
+#ifdef DBG_MESI_MANAGER
+  std::cout << "Manager in state P, msg= " << msg_type << std::endl;
+#endif
+  switch (msg_type) {
+  case MESI_CM_I_to_E:
+  case MESI_CM_I_to_S:
+    sendmsg(false, MESI_MC_GRANT_E_DATA, src_id);
+    owner = src_id; // who sent it? record sender.
+    transition_to_ie();
+    ++m_stats_used_prefetches;
+    break;
+  case GET_EVICT:
+    // evicting a prefeched block that wasn't used 
+    postmsg(false, MESI_CM_UNBLOCK_I);
+    transition_to_ei_evict();    
+    break;
+  default:
+    invalid_msg((MESI_messages_t)msg_type);
+    break;
+  }
+}
 
 
 inline void MESI_manager::do_EE(MESI_messages_t msg_type, int srcID)
@@ -505,6 +535,7 @@ void MESI_manager::transition_to_i()
 
 void MESI_manager::transition_to_e()        {state = MESI_MNG_E;}
 void MESI_manager::transition_to_s()        {state = MESI_MNG_S;}
+void MESI_manager::transition_to_p()        {state = MESI_MNG_P; }
 void MESI_manager::transition_to_ie()       {state = MESI_MNG_IE;}
 void MESI_manager::transition_to_ee()       {state = MESI_MNG_EE;}
 void MESI_manager::transition_to_ei_evict() {state = MESI_MNG_EI_EVICT;}

@@ -31,8 +31,8 @@ Dram_sim::Dram_sim (int nid, const Dram_sim_settings& dram_settings, Clock& clk)
     mc_map = NULL;
 
     /* create and register DRAMSim callback functions */
-    read_cb = new Callback<Dram_sim, void, unsigned, uint64_t, uint64_t>(this, &Dram_sim::read_complete);
-    write_cb = new Callback<Dram_sim, void, unsigned, uint64_t, uint64_t>(this, &Dram_sim::write_complete);
+    read_cb = new TransactionCompleteCB<Dram_sim>(this, &Dram_sim::read_complete);
+    write_cb = new TransactionCompleteCB<Dram_sim>(this, &Dram_sim::write_complete);
     mem->RegisterCallbacks(read_cb, write_cb, NULL);
 
     //register with clock
@@ -50,36 +50,34 @@ Dram_sim::Dram_sim (int nid, const Dram_sim_settings& dram_settings, Clock& clk)
 }
 
 
-void Dram_sim::read_complete(unsigned id, uint64_t address, uint64_t done_cycle)
+void Dram_sim::read_complete(unsigned id, int tag, uint64_t done_cycle)
 {
     //cout << "@ " << m_clk->NowTicks() << " (local) " << Manifold::NowTicks() << " (default), read complete\n";
-    map<uint64_t, list<Request> >::iterator it = m_pending_reqs.find(address);
+    map<uint64_t, list<Request> >::iterator it = m_pending_reqs.find(tag);
     assert (it != m_pending_reqs.end());
 
-    Request req = m_pending_reqs[address].front();
-    m_pending_reqs[address].pop_front();
+    Request req = m_pending_reqs[tag].front();
+    m_pending_reqs[tag].pop_front();
     if (it->second.size() == 0)
     m_pending_reqs.erase(it);
 
     assert(req.read);
-    assert(req.addr == address);
 
     m_completed_reqs.push_back(req);
 }
 
 
-void Dram_sim::write_complete(unsigned id, uint64_t address, uint64_t done_cycle)
+void Dram_sim::write_complete(unsigned id, int tag, uint64_t done_cycle)
 {
-    map<uint64_t, list<Request> >::iterator it = m_pending_reqs.find(address);
+    map<uint64_t, list<Request> >::iterator it = m_pending_reqs.find(tag);
     assert (it != m_pending_reqs.end());
 
-    Request req = m_pending_reqs[address].front();
-    m_pending_reqs[address].pop_front();
+    Request req = m_pending_reqs[tag].front();
+    m_pending_reqs[tag].pop_front();
     if (it->second.size() == 0)
     m_pending_reqs.erase(it);
 
     assert(req.read == false);
-    assert(req.addr == address);
 
     //move from pending buffer to completed buffer
     if (m_send_st_response) {

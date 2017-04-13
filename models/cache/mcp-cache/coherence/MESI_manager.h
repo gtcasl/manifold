@@ -16,6 +16,14 @@ class MESI_manager : public ManagerInterface
         MESI_manager(int id);
         /** Destructor */
         ~MESI_manager();
+        
+        unsigned get_stats_total_prefetches() const { 
+          return m_stats_total_prefetches; 
+        }
+        
+        unsigned get_stats_used_prefetches() const {
+          return m_stats_used_prefetches;
+        }
 
         /** Used by the cache to tell whether a block is 'busy' or not. */
         bool req_pending();
@@ -53,6 +61,7 @@ class MESI_manager : public ManagerInterface
 
 	//! @param \c req  Whether it's an initial request or a reply.
 	virtual void sendmsg(bool req, MESI_messages_t msg, int destID, int fwdID = -1) = 0;
+  virtual void postmsg(bool req, MESI_messages_t msg) = 0;
 	virtual void client_writeback() = 0; //subclass implements this to notify that client requests writeback.
 	virtual void invalidate() = 0;
 	virtual void ignore() = 0; //called when a request should simply be dropped.
@@ -64,16 +73,19 @@ class MESI_manager : public ManagerInterface
 #else
     public:
 #endif
-        /** Current Owner */
-        int owner;
+  /** Current Owner */
+  int owner;
 
-        MESI_manager_state_t state;
-        sharers sharersList;
-        int num_invalidations;
-        int num_invalidations_req;
+  MESI_manager_state_t state;
+  sharers sharersList;
+  int num_invalidations;
+  int num_invalidations_req;
 
-        bool unblocked_s_recv;
-        bool clean_wb_recv;
+  bool unblocked_s_recv;
+  bool clean_wb_recv;
+  
+  uint64_t m_stats_total_prefetches;
+  uint64_t m_stats_used_prefetches;
 
 	inline void do_I(MESI_messages_t msg_type, int srcID);
 	inline void do_E(MESI_messages_t msg_type, int srcID);
@@ -86,22 +98,24 @@ class MESI_manager : public ManagerInterface
 	inline void do_SS(MESI_messages_t msg_type, int srcID);
 	inline void do_SIE(MESI_messages_t msg_type, int srcID);
 	inline void do_SI_EVICT(MESI_messages_t msg_type, int srcID);
+  inline void do_P(MESI_messages_t msg_type, int srcID);
 
-        void transition_to_i();
-        void transition_to_e();
-        void transition_to_s();
-        void transition_to_ie();
-        void transition_to_ee();
-        void transition_to_ei_put();
-        void transition_to_ei_evict();
-        void transition_to_es();
-        void transition_to_ss();
-        void transition_to_sie();
-        void transition_to_si_evict();
+  void transition_to_i();
+  void transition_to_e();
+  void transition_to_s();
+  void transition_to_p();
+  void transition_to_ie();
+  void transition_to_ee();
+  void transition_to_ei_put();
+  void transition_to_ei_evict();
+  void transition_to_es();
+  void transition_to_ss();
+  void transition_to_sie();
+  void transition_to_si_evict();
+  
+  void invalid_msg( MESI_messages_t );
 
-        void invalid_msg( MESI_messages_t );
-
-        void sendmsgtosharers(MESI_messages_t msg);
+  void sendmsgtosharers(MESI_messages_t msg);
 };
 
 }

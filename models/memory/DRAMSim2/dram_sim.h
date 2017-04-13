@@ -99,13 +99,13 @@ private:
                                                                // i.e., requests being processed
 
     /* create and register our callback functions */
-    Callback_t *read_cb;
-    Callback_t *write_cb;
-    Callback_t *power_cb;
+    ITransactionCompleteCB *read_cb;
+    ITransactionCompleteCB *write_cb;
+    ITransactionCompleteCB *power_cb;
 
     /* callbacks for read and write */
-    void read_complete(unsigned id, uint64_t address, uint64_t done_cycle);
-    void write_complete(unsigned id, uint64_t address, uint64_t done_cycle);
+    void read_complete(unsigned id, int tag, uint64_t done_cycle);
+    void write_complete(unsigned id, int tag, uint64_t done_cycle);
 
     bool limitExceeds();        // check if input has to be stopped because the output is full
     void try_send_reply();     // send reply if there's any and there's credit

@@ -15,7 +15,9 @@ typedef uint64_t paddr_t;
 typedef enum {
    OpMemNoOp = 0,
    OpMemLd,
-   OpMemSt
+   OpMemSt,
+   OpPrefetch, 
+   OpEvict
 } mem_optype_t;
 
 
@@ -51,14 +53,17 @@ class cache_req {
 
 typedef enum
 {
-    INVALID_STALL = 0,
+    C_INVALID_STALL = 0,
     //C_PERMISSION_STALL, // Most basic stall, waiting for permissions (initial miss or upgrade)
     //C_REPLACEMENT_STALL, // Replacement has begun for the block this request will take over
     C_LRU_BUSY_STALL, // Waiting for LRU to become non-transient before initiating eviction/issue
     //C_BEING_REPLACED_STALL, // Match on a block being evicted, wait to complete before re-acquiring
     C_TRANS_STALL, // Match on a block in a transient state without enough permissions
     C_PREV_PEND_STALL, // Previous request to the same block is in flight
-    C_MSHR_STALL, // Out of MSHRs, must wait for one to clear
+    C_MSHR_PEND_STALL, // Previous request to the same block is in flight
+    C_MSHR_FULL_STALL, // Out of MSHRs, must wait for one to clear    
+    C_PREV_PART_STALL,  // Previous request to the same block partition is in flight
+    
 
     //M_MEM_ACCESS_STALL, //stall for memory access to complete
     //M_CLIENT_TRANS_STALL, // Manager (or peer) req stalled from transient client state.
@@ -67,9 +72,7 @@ typedef enum
     COUNT_STALL,
 } stall_type_t;
 
-
-
-
+const char* toString(stall_type_t type);
 
 } //namespace mcp_cache_namespace
 } //namespace manifold

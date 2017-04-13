@@ -221,4 +221,3 @@ void SysBuilder_l1l2 :: do_partitioning_y_part(int n_lps)
         else { m_node_conf[i].type = EMPTY_NODE; }
     }
 }
-
