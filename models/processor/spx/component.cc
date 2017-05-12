@@ -1068,6 +1068,7 @@ inst_t* LDQ_t::handle_deadlock()
             fprintf(stdout,"SPX WARNING: core%d (node %d) load inst %lu (Mop %lu) deadlock detected (threshold =%lu) paddr = %lx\n",pipeline->core->core_id,pipeline->core->node_id,deadlock_inst->uop_sequence,deadlock_inst->Mop_sequence,pipeline->config.memory_deadlock_threshold,deadlock_inst->data.paddr);
             deadlock_inst->squashed = true;
             pop(deadlock_inst);
+            abort();
             return deadlock_inst;
         }
     }
@@ -1211,6 +1212,7 @@ inst_t* STQ_t::handle_deadlock()
             fprintf(stdout,"SPX WARNING: core%d (node %d) store inst %lu (Mop %lu) deadlock detected (threshold =%lu) paddr = %lx\n",pipeline->core->core_id,pipeline->core->node_id,deadlock_inst->uop_sequence,deadlock_inst->Mop_sequence,pipeline->config.memory_deadlock_threshold,deadlock_inst->data.paddr);
             deadlock_inst->squashed = true;
             pop(deadlock_inst);
+            abort();
             return deadlock_inst;
         }
     }

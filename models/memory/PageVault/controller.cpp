@@ -196,7 +196,7 @@ void Controller::handle_request(int, uarch::NetworkPacket *pkt) {
     auto* const msg = reinterpret_cast<mcp_cache_namespace::Mem_msg*>(pkt->data);  
     int64_t gaddr = msg->get_addr();
     int64_t laddr = m_mc_map->get_local_addr(gaddr);
-    assert(laddr <= g_config.sys_mem); // ensure address in bound
+    assert(laddr < g_config.sys_mem); // ensure address in bound
     assert(0 == (laddr & EA_BLOCK_SIZE_MASK)); // ensure block-aligned address    
     memreq_t* const mreq = new memreq_t(
           laddr, 
@@ -320,7 +320,7 @@ void Controller::process_replies() {
   assert(mreq->is_read);
   
   // convert back to global address
-  int64_t gaddr = m_mc_map->get_local_addr(mreq->addr);
+  int64_t gaddr = m_mc_map->get_global_addr(mreq->addr, m_nodeid);
   
   // build reply packet
   manifold::uarch::NetworkPacket* const pkt =

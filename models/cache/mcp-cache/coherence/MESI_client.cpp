@@ -44,6 +44,35 @@ using namespace std;
 namespace manifold {
 namespace mcp_cache_namespace {
 
+const char* toString(MESI_messages_t msg_type) {
+  switch (msg_type) {
+  case MESI_CM_I_to_E: return "MESI_CM_I_to_E";
+  case MESI_CM_I_to_S: return "MESI_CM_I_to_S";
+  case MESI_CM_E_to_I: return "MESI_CM_E_to_I";
+  case MESI_CM_M_to_I: return "MESI_CM_M_to_I";
+  case MESI_CM_UNBLOCK_I: return "MESI_CM_UNBLOCK_I";
+  case MESI_CM_UNBLOCK_I_DIRTY: return "MESI_CM_UNBLOCK_I_DIRTY";
+  case MESI_CM_UNBLOCK_E: return "MESI_CM_UNBLOCK_E";
+  case MESI_CM_UNBLOCK_S: return "MESI_CM_UNBLOCK_S";
+  case MESI_CM_CLEAN: return "MESI_CM_CLEAN";
+  case MESI_CM_WRITEBACK: return "MESI_CM_WRITEBACK";
+  case MESI_MC_GRANT_E_DATA: return "MESI_MC_GRANT_E_DATA";
+  case MESI_MC_GRANT_S_DATA: return "MESI_MC_GRANT_S_DATA";
+  case MESI_MC_GRANT_I: return "MESI_MC_GRANT_I";
+  case MESI_MC_FWD_E: return "MESI_MC_FWD_E";
+  case MESI_MC_FWD_S: return "MESI_MC_FWD_S";
+  case MESI_MC_DEMAND_I: return "MESI_MC_DEMAND_I";
+  case MESI_CC_E_DATA: return "MESI_CC_E_DATA";
+  case MESI_CC_M_DATA: return "MESI_CC_M_DATA";
+  case MESI_CC_S_DATA: return "MESI_CC_S_DATA";
+  case GET_E: return "GET_E";
+  case GET_S: return "GET_S";
+  case GET_EVICT: return "GET_EVICT";
+  case GET_PREFETCH: return "GET_PREFETCH";
+  }
+  abort();
+}
+
 /** Constructor */
 MESI_client::MESI_client(int id) : ClientInterface(id)
 {

@@ -87,6 +87,7 @@ bool MESI_manager :: req_pending()
         case MESI_MNG_E:
         case MESI_MNG_S:
         case MESI_MNG_I:
+        case MESI_MNG_P:
 	    return false;
 	default:
 	    return true;

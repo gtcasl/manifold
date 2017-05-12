@@ -106,7 +106,7 @@ void spx_core_t::tick()
 #endif
 
     if (get_qsim_osd_state() == QSIM_OSD_TERMINATED) {
-        fprintf(stdout, "SPX core %d out of insn", core_id);
+        fprintf(stdout, "SPX core %d out of instructions", core_id);
         manifold::kernel::Manifold::Terminate();
     }
 }

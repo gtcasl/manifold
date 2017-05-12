@@ -112,8 +112,7 @@ void LLS_cache::get_from_memory (Coh_msg *request)
     if (l2_map->get_page_offset_bits() > my_table->get_offset_bits())
         req.addr = l2_map->get_global_addr(request->addr, node_id);
     else
-        req.addr = request->addr;
-
+      req.addr = request->addr;
     req.op_type = (request->msg == GET_PREFETCH) ? OpPrefetch : OpMemLd;
     req.src_id = node_id;
     req.src_port = manifold::uarch::LLS_ID;
@@ -153,8 +152,7 @@ void LLS_cache::dirty_to_memory (paddr_t addr)
     if (l2_map->get_page_offset_bits() > my_table->get_offset_bits())
         req.addr = l2_map->get_global_addr(addr, node_id);
     else
-        req.addr = addr;
-
+      req.addr = addr;
     req.op_type = OpMemSt;
     req.src_id = node_id;
     req.src_port = manifold::uarch::LLS_ID;
@@ -190,8 +188,7 @@ void LLS_cache::clean_to_memory(paddr_t addr) {
   if (l2_map->get_page_offset_bits() > my_table->get_offset_bits())
       req.addr = l2_map->get_global_addr(addr, node_id);
   else
-      req.addr = addr;
-  
+    req.addr = addr;  
   req.addr = addr;
   req.op_type = OpEvict;
   req.src_id = node_id;

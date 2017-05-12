@@ -1,6 +1,8 @@
 #ifndef MANIFOLD_MCP_CACHE_DEBUG_H
 #define MANIFOLD_MCP_CACHE_DEBUG_H
 
+#define DBG_MCP_CACHE_L2_CACHE
+
 #ifndef MCP_DBG_FILTER
 #define MCP_DBG_FILTER true
 #endif

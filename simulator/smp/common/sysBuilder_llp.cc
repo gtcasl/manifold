@@ -102,49 +102,51 @@ void SysBuilder_llp :: config_components()
         }
 #endif
         // pagevault settings
-        try {      
-          manifold::pagevault::config_t* _config = manifold::pagevault::get_config();
-          const Setting& pagevault_cfg = m_config.lookup("pagevault");
-          _config->type = (const char*)pagevault_cfg["ea_type"];
-          _config->mc_type = (const char*)pagevault_cfg["mc_type"];      
-          _config->queue_depth = pagevault_cfg["queue_depth"];
-          _config->sys_mem   = pagevault_cfg["sys_mem"];
-          _config->mem_capacity = pagevault_cfg["capacity"];
-          _config->mac_bits  = pagevault_cfg["mac_bits"];      
-          if (_config->type == "PMT") {
-            _config->pmt_mode = (const char*)pagevault_cfg["pmt_mode"];
-            _config->pmt_size = pagevault_cfg["pmt_size"];      
-          }
-          
-          bool bValue;      
-          _config->disable_evictions_handling = 
-              pagevault_cfg.lookupValue("disable_evictions_handling", bValue) && bValue;
-           
-          // counter cache settings
-          {
-            const Setting& ctr_cache = pagevault_cfg["ctr_cache"];
-            _config->cc.entries= ctr_cache[0];
-            _config->cc.assoc  = ctr_cache[1];
-            _config->cc.cycles = ctr_cache[2];
-          }
-          // mac cache settings
-          {
-            const Setting& mc_cfg = pagevault_cfg["mac_cache"];
-            _config->mc.entries= mc_cfg[0];
-            _config->mc.assoc  = mc_cfg[1];
-            _config->mc.cycles = mc_cfg[2];
-          }
-          // AES settings
-          {
-            const Setting& aes_engine = pagevault_cfg["aes_engine"];      
-            _config->aes.cycles = aes_engine[0];
-            _config->aes.ports  = aes_engine[1];
-          }
-          // SHA1 settings
-          {
-            const Setting& sha1_engine = pagevault_cfg["sha1_engine"];      
-            _config->sha1.cycles = sha1_engine[0];
-            _config->sha1.ports  = sha1_engine[1];
+        try {   
+          if (m_config.exists("pagevault")) {
+            manifold::pagevault::config_t* _config = manifold::pagevault::get_config();
+            const Setting& pagevault_cfg = m_config.lookup("pagevault");
+            _config->type = (const char*)pagevault_cfg["ea_type"];
+            _config->mc_type = (const char*)pagevault_cfg["mc_type"];      
+            _config->queue_depth = pagevault_cfg["queue_depth"];
+            _config->sys_mem   = pagevault_cfg["sys_mem"];
+            _config->mem_capacity = pagevault_cfg["capacity"];
+            _config->mac_bits  = pagevault_cfg["mac_bits"];      
+            if (_config->type == "PMT") {
+              _config->pmt_mode = (const char*)pagevault_cfg["pmt_mode"];
+              _config->pmt_size = pagevault_cfg["pmt_size"];      
+            }
+            
+            bool bValue;      
+            _config->disable_evictions_handling = 
+                pagevault_cfg.lookupValue("disable_evictions_handling", bValue) && bValue;
+             
+            // counter cache settings
+            {
+              const Setting& ctr_cache = pagevault_cfg["ctr_cache"];
+              _config->cc.entries= ctr_cache[0];
+              _config->cc.assoc  = ctr_cache[1];
+              _config->cc.cycles = ctr_cache[2];
+            }
+            // mac cache settings
+            {
+              const Setting& mc_cfg = pagevault_cfg["mac_cache"];
+              _config->mc.entries= mc_cfg[0];
+              _config->mc.assoc  = mc_cfg[1];
+              _config->mc.cycles = mc_cfg[2];
+            }
+            // AES settings
+            {
+              const Setting& aes_engine = pagevault_cfg["aes_engine"];      
+              _config->aes.cycles = aes_engine[0];
+              _config->aes.ports  = aes_engine[1];
+            }
+            // SHA1 settings
+            {
+              const Setting& sha1_engine = pagevault_cfg["sha1_engine"];      
+              _config->sha1.cycles = sha1_engine[0];
+              _config->sha1.ports  = sha1_engine[1];
+            }
           }
         } catch (SettingNotFoundException e) {
           cout << e.getPath() << " not set." << endl;
