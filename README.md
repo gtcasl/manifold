@@ -1,3 +1,4 @@
+[![Stories in Ready](https://badge.waffle.io/gtcasl/manifold.png?label=ready&title=Ready)](https://waffle.io/gtcasl/manifold?utm_source=badge)
 manifold[![Build Status](https://travis-ci.org/gtcasl/manifold.svg?branch=master)](https://travis-ci.org/gtcasl/manifold)
 =============
 A Parallel Simulation Framework For Multicore Systems
